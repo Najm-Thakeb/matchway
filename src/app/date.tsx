@@ -6,9 +6,14 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 
 export default function DateScreen() {
+  const params = useLocalSearchParams<{
+    mode?: string;
+    departureDate?: string;
+  }>();
+
   const today = new Date();
 
   const todayWithoutTime = new Date(
@@ -16,6 +21,23 @@ export default function DateScreen() {
     today.getMonth(),
     today.getDate(),
   );
+
+  const isReturnMode = params.mode === "return";
+
+  // Abfahrtsdatum vorbereiten, wenn wir gerade ein Rückfahrtdatum wählen
+  let departureDate: Date | null = null;
+
+  if (params.departureDate) {
+    const parsedDepartureDate = new Date(params.departureDate);
+
+    if (!isNaN(parsedDepartureDate.getTime())) {
+      departureDate = new Date(
+        parsedDepartureDate.getFullYear(),
+        parsedDepartureDate.getMonth(),
+        parsedDepartureDate.getDate(),
+      );
+    }
+  }
 
   // Aktueller Monat + nächste 2 Monate
   const months = Array.from({ length: 3 }, (_, index) => {
@@ -31,6 +53,8 @@ export default function DateScreen() {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
     const firstDay = new Date(year, month, 1).getDay();
+
+    // Unser Kalender beginnt Montag statt Sonntag
     const emptyDays = (firstDay + 6) % 7;
 
     const days = [
@@ -45,13 +69,30 @@ export default function DateScreen() {
     };
   });
 
+  function closeCalendar() {
+    if (isReturnMode) {
+      router.replace({
+        pathname: "/",
+        params: {
+          date: params.departureDate ?? "",
+        },
+      });
+
+      return;
+    }
+
+    router.replace("/");
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity onPress={() => router.replace("/")}>
+      <TouchableOpacity onPress={closeCalendar}>
         <Text style={styles.close}>✕</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>When are you leaving?</Text>
+      <Text style={styles.title}>
+        {isReturnMode ? "When are you coming back?" : "When are you leaving?"}
+      </Text>
 
       <View style={styles.weekRow}>
         <Text style={styles.weekDay}>Mon</Text>
@@ -97,11 +138,18 @@ export default function DateScreen() {
 
                   const isPast = dayDate < todayWithoutTime;
 
+                  const isBeforeDeparture =
+                    isReturnMode &&
+                    departureDate !== null &&
+                    dayDate < departureDate;
+
+                  const isDisabled = isPast || isBeforeDeparture;
+
                   return (
                     <View key={index} style={styles.dayCell}>
                       <TouchableOpacity
                         style={styles.dayButton}
-                        disabled={isPast}
+                        disabled={isDisabled}
                         onPress={() => {
                           const selectedDate = new Date(
                             monthData.year,
@@ -109,16 +157,29 @@ export default function DateScreen() {
                             day,
                           );
 
-                          router.replace({
-                            pathname: "/",
-                            params: {
-                              date: selectedDate.toISOString(),
-                            },
-                          });
+                          if (isReturnMode) {
+                            router.replace({
+                              pathname: "/",
+                              params: {
+                                date: params.departureDate ?? "",
+                                returnDate: selectedDate.toISOString(),
+                              },
+                            });
+                          } else {
+                            router.replace({
+                              pathname: "/",
+                              params: {
+                                date: selectedDate.toISOString(),
+                              },
+                            });
+                          }
                         }}
                       >
                         <Text
-                          style={[styles.dayText, isPast && styles.pastDayText]}
+                          style={[
+                            styles.dayText,
+                            isDisabled && styles.disabledDayText,
+                          ]}
                         >
                           {day}
                         </Text>
@@ -200,7 +261,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  pastDayText: {
+  disabledDayText: {
     color: "#bbbbbb",
   },
 });

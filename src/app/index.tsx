@@ -40,9 +40,15 @@ function formatDepartureDate(dateString?: string) {
 }
 
 export default function HomeScreen() {
-  const params = useLocalSearchParams<{ date?: string }>();
+  const params = useLocalSearchParams<{
+    date?: string;
+    returnDate?: string;
+  }>();
 
   const departureText = formatDepartureDate(params.date);
+  const returnText = params.returnDate
+    ? formatDepartureDate(params.returnDate)
+    : "Add return";
 
   return (
     <SafeAreaView style={styles.container}>
@@ -62,9 +68,20 @@ export default function HomeScreen() {
             <Text style={styles.value}>{departureText}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.dateItem}>
+          <TouchableOpacity
+            style={styles.dateItem}
+            onPress={() =>
+              router.push({
+                pathname: "/date",
+                params: {
+                  mode: "return",
+                  departureDate: params.date ?? "",
+                },
+              })
+            }
+          >
             <Text style={styles.label}>Return</Text>
-            <Text style={styles.value}>Add return</Text>
+            <Text style={styles.value}>{returnText}</Text>
           </TouchableOpacity>
         </View>
 
