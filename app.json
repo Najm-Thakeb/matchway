@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "rihla",
-    "slug": "rihla",
+    "name": "MatchWay",
+    "slug": "matchway",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "rihla",
+    "scheme": "matchway",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
