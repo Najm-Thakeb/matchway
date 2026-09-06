@@ -43,9 +43,14 @@ export default function HomeScreen() {
   const params = useLocalSearchParams<{
     date?: string;
     returnDate?: string;
+    passengers?: string;
   }>();
 
   const departureText = formatDepartureDate(params.date);
+  const passengerCount = Number(params.passengers ?? "1");
+
+  const passengerText =
+    passengerCount === 1 ? "1 passenger" : `${passengerCount} passengers`;
   const returnText = params.returnDate
     ? formatDepartureDate(params.returnDate)
     : "Add return";
@@ -86,14 +91,20 @@ export default function HomeScreen() {
         </View>
 
         <TouchableOpacity
+          style={styles.passengerItem}
           onPress={() =>
-            Alert.alert(
-              "Passengers",
-              "Here we will later choose the number of passengers.",
-            )
+            router.push({
+              pathname: "/passengers",
+              params: {
+                date: params.date ?? "",
+                returnDate: params.returnDate ?? "",
+                passengers: params.passengers ?? "1",
+              },
+            })
           }
         >
-          <Text style={styles.item}>1 passenger</Text>
+          <Text style={styles.label}>Passengers</Text>
+          <Text style={styles.value}>{passengerText}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -171,5 +182,10 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 17,
     fontWeight: "bold",
+  },
+  passengerItem: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#dddddd",
   },
 });
