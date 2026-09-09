@@ -3,9 +3,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 
+const MATCHWAY_RED = "#E63946";
+
 export default function PassengersScreen() {
   const params = useLocalSearchParams<{
-    date?: string;
+    departureDate?: string;
     returnDate?: string;
     passengers?: string;
   }>();
@@ -14,26 +16,25 @@ export default function PassengersScreen() {
 
   const [passengers, setPassengers] = useState(initialPassengers);
 
-  function closeScreen() {
+  function goHome(passengerCount: number) {
     router.replace({
       pathname: "/",
       params: {
-        date: params.date ?? "",
+        departureDate: params.departureDate ?? "",
+
         returnDate: params.returnDate ?? "",
-        passengers: String(initialPassengers),
+
+        passengers: String(passengerCount),
       },
     });
   }
 
+  function closeScreen() {
+    goHome(initialPassengers);
+  }
+
   function confirmPassengers() {
-    router.replace({
-      pathname: "/",
-      params: {
-        date: params.date ?? "",
-        returnDate: params.returnDate ?? "",
-        passengers: String(passengers),
-      },
-    });
+    goHome(passengers);
   }
 
   return (
@@ -62,7 +63,7 @@ export default function PassengersScreen() {
           style={styles.counterButton}
           onPress={() => setPassengers(passengers + 1)}
         >
-          <Text style={styles.counterSymbol}>＋</Text>
+          <Text style={styles.counterSymbol}>+</Text>
         </TouchableOpacity>
       </View>
 
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFFFFF",
   },
 
   close: {
@@ -105,6 +106,7 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     borderWidth: 2,
+    borderColor: MATCHWAY_RED,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -115,6 +117,7 @@ const styles = StyleSheet.create({
 
   counterSymbol: {
     fontSize: 30,
+    color: MATCHWAY_RED,
   },
 
   number: {
@@ -126,12 +129,12 @@ const styles = StyleSheet.create({
     marginTop: "auto",
     padding: 18,
     borderRadius: 30,
-    backgroundColor: "#333333",
+    backgroundColor: MATCHWAY_RED,
     alignItems: "center",
   },
 
   confirmText: {
-    color: "#ffffff",
+    color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "bold",
   },

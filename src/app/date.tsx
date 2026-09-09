@@ -8,36 +8,65 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 
+const MATCHWAY_RED = "#E63946";
+
+function normalizeDate(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function parseDate(dateString?: string) {
+  if (!dateString) {
+    return null;
+  }
+
+  const parsedDate = new Date(dateString);
+
+  if (isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  return normalizeDate(parsedDate);
+}
+
+function isSameDay(date1: Date, date2: Date) {
+  return date1.getTime() === date2.getTime();
+}
+
 export default function DateScreen() {
   const params = useLocalSearchParams<{
-    mode?: string;
+    mode?: "departure" | "return";
     departureDate?: string;
+    returnDate?: string;
+    passengers?: string;
   }>();
 
-  const today = new Date();
-
-  const todayWithoutTime = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
+  const today = normalizeDate(new Date());
 
   const isReturnMode = params.mode === "return";
 
-  // Abfahrtsdatum vorbereiten, wenn wir gerade ein Rückfahrtdatum wählen
-  let departureDate: Date | null = null;
+  /*
+   * Wenn noch kein Departure gewählt wurde,
+   * ist Departure automatisch TODAY.
+   */
+  const departureDate = parseDate(params.departureDate) ?? today;
 
-  if (params.departureDate) {
-    const parsedDepartureDate = new Date(params.departureDate);
+  /*
+   * Return hat KEIN automatisches Datum.
+   */
+  const returnDate = parseDate(params.returnDate);
 
-    if (!isNaN(parsedDepartureDate.getTime())) {
-      departureDate = new Date(
-        parsedDepartureDate.getFullYear(),
-        parsedDepartureDate.getMonth(),
-        parsedDepartureDate.getDate(),
-      );
-    }
-  }
+  /*
+   * Welcher Tag soll komplett rot sein?
+   *
+   * Departure:
+   * - noch nichts gewählt -> Today
+   * - gewählt -> gewähltes Datum
+   *
+   * Return:
+   * - noch nichts gewählt -> keiner
+   * - gewählt -> gewähltes Datum
+   */
+  const selectedDate = isReturnMode ? returnDate : departureDate;
 
   // Aktueller Monat + nächste 2 Monate
   const months = Array.from({ length: 3 }, (_, index) => {
@@ -54,7 +83,8 @@ export default function DateScreen() {
 
     const firstDay = new Date(year, month, 1).getDay();
 
-    // Unser Kalender beginnt Montag statt Sonntag
+    // JavaScript beginnt Sonntag.
+    // Wir wollen Montag.
     const emptyDays = (firstDay + 6) % 7;
 
     const days = [
@@ -69,19 +99,53 @@ export default function DateScreen() {
     };
   });
 
-  function closeCalendar() {
+  function goHome(newDepartureDate?: string, newReturnDate?: string) {
+    router.replace({
+      pathname: "/",
+      params: {
+        departureDate: newDepartureDate ?? params.departureDate ?? "",
+
+        returnDate: newReturnDate ?? params.returnDate ?? "",
+
+        passengers: params.passengers ?? "1",
+      },
+    });
+  }
+
+  function selectDate(dayDate: Date) {
+    /*
+     * RETURN auswählen
+     */
     if (isReturnMode) {
-      router.replace({
-        pathname: "/",
-        params: {
-          date: params.departureDate ?? "",
-        },
-      });
+      goHome(params.departureDate ?? "", dayDate.toISOString());
 
       return;
     }
 
-    router.replace("/");
+    /*
+     * DEPARTURE auswählen
+     */
+
+    const existingReturnDate = parseDate(params.returnDate);
+
+    /*
+     * Beispiel:
+     *
+     * Return war 10. September.
+     * Departure wird nachträglich auf 15. September geändert.
+     *
+     * Dann ist Return ungültig und wird gelöscht.
+     */
+    const validReturnDate =
+      existingReturnDate && existingReturnDate >= dayDate
+        ? (params.returnDate ?? "")
+        : "";
+
+    goHome(dayDate.toISOString(), validReturnDate);
+  }
+
+  function closeCalendar() {
+    goHome();
   }
 
   return (
@@ -130,55 +194,57 @@ export default function DateScreen() {
                     return <View key={index} style={styles.dayCell} />;
                   }
 
-                  const dayDate = new Date(
-                    monthData.year,
-                    monthData.month,
-                    day,
+                  const dayDate = normalizeDate(
+                    new Date(monthData.year, monthData.month, day),
                   );
 
-                  const isPast = dayDate < todayWithoutTime;
+                  /*
+                   * Vergangenheit sperren
+                   */
+                  const isPast = dayDate < today;
 
+                  /*
+                   * Bei RETURN zusätzlich:
+                   * alles vor Departure sperren
+                   */
                   const isBeforeDeparture =
-                    isReturnMode &&
-                    departureDate !== null &&
-                    dayDate < departureDate;
+                    isReturnMode && dayDate < departureDate;
 
                   const isDisabled = isPast || isBeforeDeparture;
+
+                  const isToday = isSameDay(dayDate, today);
+
+                  const isSelected =
+                    selectedDate !== null && isSameDay(dayDate, selectedDate);
 
                   return (
                     <View key={index} style={styles.dayCell}>
                       <TouchableOpacity
-                        style={styles.dayButton}
-                        disabled={isDisabled}
-                        onPress={() => {
-                          const selectedDate = new Date(
-                            monthData.year,
-                            monthData.month,
-                            day,
-                          );
+                        style={[
+                          styles.dayButton,
 
-                          if (isReturnMode) {
-                            router.replace({
-                              pathname: "/",
-                              params: {
-                                date: params.departureDate ?? "",
-                                returnDate: selectedDate.toISOString(),
-                              },
-                            });
-                          } else {
-                            router.replace({
-                              pathname: "/",
-                              params: {
-                                date: selectedDate.toISOString(),
-                              },
-                            });
-                          }
-                        }}
+                          /*
+                           * TODAY bekommt einen roten Rand,
+                           * ABER nur wenn Today nicht gerade
+                           * selbst ausgewählt ist.
+                           */
+                          isToday && !isSelected && styles.todayButton,
+
+                          /*
+                           * Gewähltes Datum komplett rot.
+                           */
+                          isSelected && styles.selectedDayButton,
+                        ]}
+                        disabled={isDisabled}
+                        onPress={() => selectDate(dayDate)}
                       >
                         <Text
                           style={[
                             styles.dayText,
+
                             isDisabled && styles.disabledDayText,
+
+                            isSelected && styles.selectedDayText,
                           ]}
                         >
                           {day}
@@ -200,7 +266,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFFFFF",
   },
 
   close: {
@@ -244,24 +310,39 @@ const styles = StyleSheet.create({
 
   dayCell: {
     width: "14.28%",
-    height: 50,
+    height: 52,
     alignItems: "center",
     justifyContent: "center",
   },
 
   dayButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
 
+  todayButton: {
+    borderWidth: 2,
+    borderColor: MATCHWAY_RED,
+  },
+
+  selectedDayButton: {
+    backgroundColor: MATCHWAY_RED,
+  },
+
   dayText: {
     fontSize: 16,
+    color: "#555F73",
   },
 
   disabledDayText: {
-    color: "#bbbbbb",
+    color: "#C4C7CC",
+  },
+
+  selectedDayText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
 });

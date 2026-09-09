@@ -1,15 +1,8 @@
-import {
-  Alert,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 
-function formatDepartureDate(dateString?: string) {
+function formatDate(dateString?: string) {
   if (!dateString) {
     return "Today";
   }
@@ -41,62 +34,123 @@ function formatDepartureDate(dateString?: string) {
 
 export default function HomeScreen() {
   const params = useLocalSearchParams<{
-    date?: string;
+    departureDate?: string;
     returnDate?: string;
     passengers?: string;
   }>();
 
-  const departureText = formatDepartureDate(params.date);
+  const departureText = formatDate(params.departureDate);
+
+  const returnText = params.returnDate
+    ? formatDate(params.returnDate)
+    : "Add return";
+
   const passengerCount = Number(params.passengers ?? "1");
 
   const passengerText =
     passengerCount === 1 ? "1 passenger" : `${passengerCount} passengers`;
-  const returnText = params.returnDate
-    ? formatDepartureDate(params.returnDate)
-    : "Add return";
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.logo}>MatchWay</Text>
 
       <View style={styles.searchBox}>
-        <TextInput style={styles.item} placeholder="From" />
+        {/* FROM */}
+        <TouchableOpacity
+          style={styles.locationItem}
+          onPress={() =>
+            router.push({
+              pathname: "/location",
+              params: {
+                mode: "from",
+              },
+            })
+          }
+        >
+          <Text style={styles.label}>From</Text>
+          <Text style={styles.locationValue}>City, station or place</Text>
+        </TouchableOpacity>
 
-        <TextInput style={styles.item} placeholder="To" />
+        {/* TO */}
+        <TouchableOpacity
+          style={styles.locationItem}
+          onPress={() =>
+            router.push({
+              pathname: "/location",
+              params: {
+                mode: "to",
+              },
+            })
+          }
+        >
+          <Text style={styles.label}>To</Text>
+          <Text style={styles.locationValue}>City, station or place</Text>
+        </TouchableOpacity>
 
+        {/* DEPARTURE + RETURN */}
         <View style={styles.dateRow}>
-          <TouchableOpacity
-            style={styles.dateItem}
-            onPress={() => router.push("/date")}
-          >
-            <Text style={styles.label}>Departure</Text>
-            <Text style={styles.value}>{departureText}</Text>
-          </TouchableOpacity>
-
+          {/* DEPARTURE */}
           <TouchableOpacity
             style={styles.dateItem}
             onPress={() =>
               router.push({
                 pathname: "/date",
                 params: {
-                  mode: "return",
-                  departureDate: params.date ?? "",
+                  mode: "departure",
+                  departureDate: params.departureDate ?? "",
+                  returnDate: params.returnDate ?? "",
+                  passengers: params.passengers ?? "1",
                 },
               })
             }
           >
-            <Text style={styles.label}>Return</Text>
-            <Text style={styles.value}>{returnText}</Text>
+            <Text style={styles.label}>Departure</Text>
+            <Text style={styles.value}>{departureText}</Text>
           </TouchableOpacity>
+
+          {/* RETURN */}
+          <View style={[styles.dateItem, styles.returnItem]}>
+            <TouchableOpacity
+              style={styles.returnContent}
+              onPress={() =>
+                router.push({
+                  pathname: "/date",
+                  params: {
+                    mode: "return",
+                    departureDate: params.departureDate ?? "",
+                    returnDate: params.returnDate ?? "",
+                    passengers: params.passengers ?? "1",
+                  },
+                })
+              }
+            >
+              <Text style={styles.label}>Return</Text>
+              <Text style={styles.value}>{returnText}</Text>
+            </TouchableOpacity>
+
+            {params.returnDate ? (
+              <TouchableOpacity
+                style={styles.clearReturnButton}
+                onPress={() =>
+                  router.setParams({
+                    returnDate: "",
+                  })
+                }
+              >
+                <Text style={styles.clearReturnText}>×</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
 
+        {/* PASSENGERS */}
         <TouchableOpacity
           style={styles.passengerItem}
           onPress={() =>
             router.push({
               pathname: "/passengers",
               params: {
-                date: params.date ?? "",
+                departureDate: params.departureDate ?? "",
                 returnDate: params.returnDate ?? "",
                 passengers: params.passengers ?? "1",
               },
@@ -107,6 +161,7 @@ export default function HomeScreen() {
           <Text style={styles.value}>{passengerText}</Text>
         </TouchableOpacity>
 
+        {/* SEARCH */}
         <TouchableOpacity
           style={styles.button}
           onPress={() =>
@@ -127,7 +182,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFFFFF",
   },
 
   logo: {
@@ -140,11 +195,15 @@ const styles = StyleSheet.create({
     gap: 20,
   },
 
-  item: {
-    fontSize: 18,
+  locationItem: {
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "#dddddd",
+    borderBottomColor: "#DDDDDD",
+  },
+
+  locationValue: {
+    fontSize: 18,
+    color: "#888888",
   },
 
   dateRow: {
@@ -156,7 +215,13 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "#dddddd",
+    borderBottomColor: "#DDDDDD",
+  },
+
+  passengerItem: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#DDDDDD",
   },
 
   label: {
@@ -171,7 +236,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    backgroundColor: "#333333",
+    backgroundColor: "#E63946",
     padding: 18,
     borderRadius: 25,
     alignItems: "center",
@@ -179,13 +244,28 @@ const styles = StyleSheet.create({
   },
 
   buttonText: {
-    color: "#ffffff",
+    color: "#FFFFFF",
     fontSize: 17,
     fontWeight: "bold",
   },
-  passengerItem: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#dddddd",
+  returnItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  returnContent: {
+    flex: 1,
+  },
+
+  clearReturnButton: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  clearReturnText: {
+    fontSize: 30,
+    color: "#667085",
   },
 });
