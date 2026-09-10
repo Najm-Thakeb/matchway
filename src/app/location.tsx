@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TextInput,
@@ -9,12 +10,30 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 
+type PlaceSuggestion = {
+  placeId: string;
+  mainText: string;
+  secondaryText: string;
+};
+
 export default function LocationScreen() {
   const params = useLocalSearchParams<{
     mode?: "from" | "to";
+
+    fromLabel?: string;
+    fromPlaceId?: string;
+
+    toLabel?: string;
+    toPlaceId?: string;
+
+    departureDate?: string;
+    returnDate?: string;
+    passengers?: string;
   }>();
 
   const [searchText, setSearchText] = useState("");
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const inputRef = useRef<TextInput>(null);
 
@@ -23,9 +42,73 @@ export default function LocationScreen() {
       ? "Where are you going?"
       : "Where are you leaving from?";
 
+  useEffect(() => {
+    if (searchText.trim().length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      searchLocations(searchText);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  async function searchLocations(query: string) {
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        `http://localhost:3000/locations/autocomplete?q=${encodeURIComponent(
+          query,
+        )}`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Location search failed");
+      }
+
+      const data: PlaceSuggestion[] = await response.json();
+
+      setSuggestions(data);
+    } catch (error) {
+      console.error("Location search error:", error);
+      setSuggestions([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function clearSearch() {
     setSearchText("");
+    setSuggestions([]);
     inputRef.current?.focus();
+  }
+
+  function selectPlace(place: PlaceSuggestion) {
+    const label = place.secondaryText
+      ? `${place.mainText}, ${place.secondaryText}`
+      : place.mainText;
+
+    router.replace({
+      pathname: "/",
+      params: {
+        fromLabel: params.mode === "from" ? label : (params.fromLabel ?? ""),
+
+        fromPlaceId:
+          params.mode === "from" ? place.placeId : (params.fromPlaceId ?? ""),
+
+        toLabel: params.mode === "to" ? label : (params.toLabel ?? ""),
+
+        toPlaceId:
+          params.mode === "to" ? place.placeId : (params.toPlaceId ?? ""),
+
+        departureDate: params.departureDate ?? "",
+        returnDate: params.returnDate ?? "",
+        passengers: params.passengers ?? "1",
+      },
+    });
   }
 
   return (
@@ -58,6 +141,28 @@ export default function LocationScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {loading && (
+        <ActivityIndicator
+          style={styles.loading}
+          size="small"
+          color="#E63946"
+        />
+      )}
+
+      <View style={styles.results}>
+        {suggestions.map((place) => (
+          <TouchableOpacity
+            key={place.placeId}
+            style={styles.resultItem}
+            onPress={() => selectPlace(place)}
+          >
+            <Text style={styles.mainText}>{place.mainText}</Text>
+
+            <Text style={styles.secondaryText}>{place.secondaryText}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </SafeAreaView>
   );
 }
@@ -83,13 +188,10 @@ const styles = StyleSheet.create({
     height: 58,
     flexDirection: "row",
     alignItems: "center",
-
     backgroundColor: "#F1F2F4",
-
     borderWidth: 2,
     borderColor: "#E63946",
     borderRadius: 18,
-
     paddingHorizontal: 10,
   },
 
@@ -110,7 +212,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     paddingHorizontal: 8,
-
     fontSize: 18,
     color: "#111111",
   },
@@ -119,5 +220,31 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: "#555B66",
     lineHeight: 34,
+  },
+
+  loading: {
+    marginTop: 24,
+  },
+
+  results: {
+    marginTop: 18,
+  },
+
+  resultItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E6E6E6",
+  },
+
+  mainText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111111",
+  },
+
+  secondaryText: {
+    fontSize: 14,
+    color: "#777777",
+    marginTop: 4,
   },
 });

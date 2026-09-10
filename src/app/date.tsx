@@ -35,6 +35,12 @@ function isSameDay(date1: Date, date2: Date) {
 export default function DateScreen() {
   const params = useLocalSearchParams<{
     mode?: "departure" | "return";
+
+    fromLabel?: string;
+    fromPlaceId?: string;
+    toLabel?: string;
+    toPlaceId?: string;
+
     departureDate?: string;
     returnDate?: string;
     passengers?: string;
@@ -103,6 +109,11 @@ export default function DateScreen() {
     router.replace({
       pathname: "/",
       params: {
+        fromLabel: params.fromLabel ?? "",
+        fromPlaceId: params.fromPlaceId ?? "",
+        toLabel: params.toLabel ?? "",
+        toPlaceId: params.toPlaceId ?? "",
+
         departureDate: newDepartureDate ?? params.departureDate ?? "",
 
         returnDate: newReturnDate ?? params.returnDate ?? "",

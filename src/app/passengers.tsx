@@ -7,6 +7,11 @@ const MATCHWAY_RED = "#E63946";
 
 export default function PassengersScreen() {
   const params = useLocalSearchParams<{
+    fromLabel?: string;
+    fromPlaceId?: string;
+    toLabel?: string;
+    toPlaceId?: string;
+
     departureDate?: string;
     returnDate?: string;
     passengers?: string;
@@ -20,10 +25,13 @@ export default function PassengersScreen() {
     router.replace({
       pathname: "/",
       params: {
+        fromLabel: params.fromLabel ?? "",
+        fromPlaceId: params.fromPlaceId ?? "",
+        toLabel: params.toLabel ?? "",
+        toPlaceId: params.toPlaceId ?? "",
+
         departureDate: params.departureDate ?? "",
-
         returnDate: params.returnDate ?? "",
-
         passengers: String(passengerCount),
       },
     });
