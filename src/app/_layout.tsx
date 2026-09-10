@@ -5,5 +5,18 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen
+        name="edit-search"
+        options={{
+          presentation: "transparentModal",
+          animation: "fade",
+          contentStyle: {
+            backgroundColor: "transparent",
+          },
+        }}
+      />
+    </Stack>
+  );
 }
