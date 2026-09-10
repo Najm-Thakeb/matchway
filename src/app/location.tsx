@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSearchStore } from "../store/searchStore";
 
 type PlaceSuggestion = {
   placeId: string;
@@ -17,6 +18,7 @@ type PlaceSuggestion = {
 };
 
 export default function LocationScreen() {
+  const { setFrom, setTo } = useSearchStore();
   const params = useLocalSearchParams<{
     mode?: "from" | "to";
 
@@ -91,24 +93,15 @@ export default function LocationScreen() {
       ? `${place.mainText}, ${place.secondaryText}`
       : place.mainText;
 
-    router.replace({
-      pathname: "/",
-      params: {
-        fromLabel: params.mode === "from" ? label : (params.fromLabel ?? ""),
+    if (params.mode === "from") {
+      setFrom(label, place.placeId);
+    }
 
-        fromPlaceId:
-          params.mode === "from" ? place.placeId : (params.fromPlaceId ?? ""),
+    if (params.mode === "to") {
+      setTo(label, place.placeId);
+    }
 
-        toLabel: params.mode === "to" ? label : (params.toLabel ?? ""),
-
-        toPlaceId:
-          params.mode === "to" ? place.placeId : (params.toPlaceId ?? ""),
-
-        departureDate: params.departureDate ?? "",
-        returnDate: params.returnDate ?? "",
-        passengers: params.passengers ?? "1",
-      },
-    });
+    router.back();
   }
 
   return (

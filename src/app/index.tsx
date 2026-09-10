@@ -1,6 +1,7 @@
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
+import { useSearchStore } from "../store/searchStore";
 
 function formatDate(dateString?: string) {
   if (!dateString) {
@@ -33,27 +34,23 @@ function formatDate(dateString?: string) {
 }
 
 export default function HomeScreen() {
-  const params = useLocalSearchParams<{
-    fromLabel?: string;
-    fromPlaceId?: string;
+  const {
+    fromLabel,
+    fromPlaceId,
+    toLabel,
+    toPlaceId,
+    departureDate,
+    returnDate,
+    passengers,
+    clearReturnDate,
+  } = useSearchStore();
 
-    toLabel?: string;
-    toPlaceId?: string;
-    departureDate?: string;
-    returnDate?: string;
-    passengers?: string;
-  }>();
+  const departureText = formatDate(departureDate);
 
-  const departureText = formatDate(params.departureDate);
-
-  const returnText = params.returnDate
-    ? formatDate(params.returnDate)
-    : "Add return";
-
-  const passengerCount = Number(params.passengers ?? "1");
+  const returnText = returnDate ? formatDate(returnDate) : "Add return";
 
   const passengerText =
-    passengerCount === 1 ? "1 passenger" : `${passengerCount} passengers`;
+    passengers === 1 ? "1 passenger" : `${passengers} passengers`;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -69,22 +66,22 @@ export default function HomeScreen() {
               params: {
                 mode: "from",
 
-                fromLabel: params.fromLabel ?? "",
-                fromPlaceId: params.fromPlaceId ?? "",
-                toLabel: params.toLabel ?? "",
-                toPlaceId: params.toPlaceId ?? "",
+                fromLabel,
+                fromPlaceId,
+                toLabel,
+                toPlaceId,
 
-                departureDate: params.departureDate ?? "",
-                returnDate: params.returnDate ?? "",
-                passengers: params.passengers ?? "1",
+                departureDate,
+                returnDate,
+                passengers: String(passengers),
               },
             })
           }
         >
           <Text style={styles.label}>From</Text>
 
-          <Text style={params.fromLabel ? styles.value : styles.locationValue}>
-            {params.fromLabel || "City, station or place"}
+          <Text style={fromLabel ? styles.value : styles.locationValue}>
+            {fromLabel || "City, station or place"}
           </Text>
         </TouchableOpacity>
 
@@ -97,22 +94,22 @@ export default function HomeScreen() {
               params: {
                 mode: "to",
 
-                fromLabel: params.fromLabel ?? "",
-                fromPlaceId: params.fromPlaceId ?? "",
-                toLabel: params.toLabel ?? "",
-                toPlaceId: params.toPlaceId ?? "",
+                fromLabel,
+                fromPlaceId,
+                toLabel,
+                toPlaceId,
 
-                departureDate: params.departureDate ?? "",
-                returnDate: params.returnDate ?? "",
-                passengers: params.passengers ?? "1",
+                departureDate,
+                returnDate,
+                passengers: String(passengers),
               },
             })
           }
         >
           <Text style={styles.label}>To</Text>
 
-          <Text style={params.toLabel ? styles.value : styles.locationValue}>
-            {params.toLabel || "City, station or place"}
+          <Text style={toLabel ? styles.value : styles.locationValue}>
+            {toLabel || "City, station or place"}
           </Text>
         </TouchableOpacity>
 
@@ -127,14 +124,14 @@ export default function HomeScreen() {
                 params: {
                   mode: "departure",
 
-                  fromLabel: params.fromLabel ?? "",
-                  fromPlaceId: params.fromPlaceId ?? "",
-                  toLabel: params.toLabel ?? "",
-                  toPlaceId: params.toPlaceId ?? "",
+                  fromLabel,
+                  fromPlaceId,
+                  toLabel,
+                  toPlaceId,
 
-                  departureDate: params.departureDate ?? "",
-                  returnDate: params.returnDate ?? "",
-                  passengers: params.passengers ?? "1",
+                  departureDate,
+                  returnDate,
+                  passengers: String(passengers),
                 },
               })
             }
@@ -153,14 +150,14 @@ export default function HomeScreen() {
                   params: {
                     mode: "return",
 
-                    fromLabel: params.fromLabel ?? "",
-                    fromPlaceId: params.fromPlaceId ?? "",
-                    toLabel: params.toLabel ?? "",
-                    toPlaceId: params.toPlaceId ?? "",
+                    fromLabel,
+                    fromPlaceId,
+                    toLabel,
+                    toPlaceId,
 
-                    departureDate: params.departureDate ?? "",
-                    returnDate: params.returnDate ?? "",
-                    passengers: params.passengers ?? "1",
+                    departureDate,
+                    returnDate,
+                    passengers: String(passengers),
                   },
                 })
               }
@@ -169,14 +166,10 @@ export default function HomeScreen() {
               <Text style={styles.value}>{returnText}</Text>
             </TouchableOpacity>
 
-            {params.returnDate ? (
+            {returnDate ? (
               <TouchableOpacity
                 style={styles.clearReturnButton}
-                onPress={() =>
-                  router.setParams({
-                    returnDate: "",
-                  })
-                }
+                onPress={clearReturnDate}
               >
                 <Text style={styles.clearReturnText}>×</Text>
               </TouchableOpacity>
@@ -191,31 +184,34 @@ export default function HomeScreen() {
             router.push({
               pathname: "/passengers",
               params: {
-                fromLabel: params.fromLabel ?? "",
-                fromPlaceId: params.fromPlaceId ?? "",
-                toLabel: params.toLabel ?? "",
-                toPlaceId: params.toPlaceId ?? "",
+                fromLabel,
+                fromPlaceId,
+                toLabel,
+                toPlaceId,
 
-                departureDate: params.departureDate ?? "",
-                returnDate: params.returnDate ?? "",
-                passengers: params.passengers ?? "1",
+                departureDate,
+                returnDate,
+                passengers: String(passengers),
               },
             })
           }
         >
           <Text style={styles.label}>Passengers</Text>
+
           <Text style={styles.value}>{passengerText}</Text>
         </TouchableOpacity>
 
         {/* SEARCH */}
         <TouchableOpacity
           style={styles.button}
-          onPress={() =>
-            Alert.alert(
-              "Search",
-              "Here we will later search for matching rides.",
-            )
-          }
+          onPress={() => {
+            if (!fromLabel || !toLabel) {
+              Alert.alert("Missing location", "Please select From and To.");
+              return;
+            }
+
+            router.push("/results");
+          }}
         >
           <Text style={styles.buttonText}>Search</Text>
         </TouchableOpacity>
@@ -294,6 +290,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "bold",
   },
+
   returnItem: {
     flexDirection: "row",
     alignItems: "center",

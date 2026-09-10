@@ -1,48 +1,23 @@
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
+import { useSearchStore } from "../store/searchStore";
 
 const MATCHWAY_RED = "#E63946";
 
 export default function PassengersScreen() {
-  const params = useLocalSearchParams<{
-    fromLabel?: string;
-    fromPlaceId?: string;
-    toLabel?: string;
-    toPlaceId?: string;
+  const { passengers: savedPassengers, setPassengers } = useSearchStore();
 
-    departureDate?: string;
-    returnDate?: string;
-    passengers?: string;
-  }>();
-
-  const initialPassengers = Number(params.passengers) || 1;
-
-  const [passengers, setPassengers] = useState(initialPassengers);
-
-  function goHome(passengerCount: number) {
-    router.replace({
-      pathname: "/",
-      params: {
-        fromLabel: params.fromLabel ?? "",
-        fromPlaceId: params.fromPlaceId ?? "",
-        toLabel: params.toLabel ?? "",
-        toPlaceId: params.toPlaceId ?? "",
-
-        departureDate: params.departureDate ?? "",
-        returnDate: params.returnDate ?? "",
-        passengers: String(passengerCount),
-      },
-    });
-  }
+  const [passengers, setLocalPassengers] = useState(savedPassengers);
 
   function closeScreen() {
-    goHome(initialPassengers);
+    router.back();
   }
 
   function confirmPassengers() {
-    goHome(passengers);
+    setPassengers(passengers);
+    router.back();
   }
 
   return (
@@ -60,7 +35,7 @@ export default function PassengersScreen() {
             passengers === 1 && styles.disabledButton,
           ]}
           disabled={passengers === 1}
-          onPress={() => setPassengers(passengers - 1)}
+          onPress={() => setLocalPassengers(passengers - 1)}
         >
           <Text style={styles.counterSymbol}>−</Text>
         </TouchableOpacity>
@@ -69,7 +44,7 @@ export default function PassengersScreen() {
 
         <TouchableOpacity
           style={styles.counterButton}
-          onPress={() => setPassengers(passengers + 1)}
+          onPress={() => setLocalPassengers(passengers + 1)}
         >
           <Text style={styles.counterSymbol}>+</Text>
         </TouchableOpacity>

@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { useSearchStore } from "../store/searchStore";
 
 const MATCHWAY_RED = "#E63946";
 
@@ -35,44 +36,37 @@ function isSameDay(date1: Date, date2: Date) {
 export default function DateScreen() {
   const params = useLocalSearchParams<{
     mode?: "departure" | "return";
-
-    fromLabel?: string;
-    fromPlaceId?: string;
-    toLabel?: string;
-    toPlaceId?: string;
-
-    departureDate?: string;
-    returnDate?: string;
-    passengers?: string;
   }>();
+
+  const {
+    departureDate,
+    returnDate,
+    setDepartureDate,
+    setReturnDate,
+    clearReturnDate,
+  } = useSearchStore();
 
   const today = normalizeDate(new Date());
 
   const isReturnMode = params.mode === "return";
 
-  /*
-   * Wenn noch kein Departure gewählt wurde,
-   * ist Departure automatisch TODAY.
-   */
-  const departureDate = parseDate(params.departureDate) ?? today;
+  // Wenn noch keine Abfahrt gewählt wurde,
+  // gilt automatisch heute.
+  const parsedDepartureDate = parseDate(departureDate) ?? today;
+
+  // Return ist leer, bis der Nutzer etwas auswählt.
+  const parsedReturnDate = parseDate(returnDate);
 
   /*
-   * Return hat KEIN automatisches Datum.
-   */
-  const returnDate = parseDate(params.returnDate);
-
-  /*
-   * Welcher Tag soll komplett rot sein?
-   *
    * Departure:
-   * - noch nichts gewählt -> Today
-   * - gewählt -> gewähltes Datum
+   * - nichts gewählt -> Heute komplett rot
+   * - Datum gewählt -> ausgewähltes Datum komplett rot
    *
    * Return:
-   * - noch nichts gewählt -> keiner
-   * - gewählt -> gewähltes Datum
+   * - nichts gewählt -> kein Tag komplett rot
+   * - Datum gewählt -> ausgewähltes Datum komplett rot
    */
-  const selectedDate = isReturnMode ? returnDate : departureDate;
+  const selectedDate = isReturnMode ? parsedReturnDate : parsedDepartureDate;
 
   // Aktueller Monat + nächste 2 Monate
   const months = Array.from({ length: 3 }, (_, index) => {
@@ -89,8 +83,7 @@ export default function DateScreen() {
 
     const firstDay = new Date(year, month, 1).getDay();
 
-    // JavaScript beginnt Sonntag.
-    // Wir wollen Montag.
+    // Kalender beginnt bei Montag
     const emptyDays = (firstDay + 6) % 7;
 
     const days = [
@@ -105,58 +98,26 @@ export default function DateScreen() {
     };
   });
 
-  function goHome(newDepartureDate?: string, newReturnDate?: string) {
-    router.replace({
-      pathname: "/",
-      params: {
-        fromLabel: params.fromLabel ?? "",
-        fromPlaceId: params.fromPlaceId ?? "",
-        toLabel: params.toLabel ?? "",
-        toPlaceId: params.toPlaceId ?? "",
-
-        departureDate: newDepartureDate ?? params.departureDate ?? "",
-
-        returnDate: newReturnDate ?? params.returnDate ?? "",
-
-        passengers: params.passengers ?? "1",
-      },
-    });
-  }
-
   function selectDate(dayDate: Date) {
-    /*
-     * RETURN auswählen
-     */
+    // RETURN
     if (isReturnMode) {
-      goHome(params.departureDate ?? "", dayDate.toISOString());
-
+      setReturnDate(dayDate.toISOString());
+      router.back();
       return;
     }
 
-    /*
-     * DEPARTURE auswählen
-     */
+    // DEPARTURE
+    // Falls Return danach ungültig wäre, Return löschen.
+    if (parsedReturnDate && parsedReturnDate < dayDate) {
+      clearReturnDate();
+    }
 
-    const existingReturnDate = parseDate(params.returnDate);
-
-    /*
-     * Beispiel:
-     *
-     * Return war 10. September.
-     * Departure wird nachträglich auf 15. September geändert.
-     *
-     * Dann ist Return ungültig und wird gelöscht.
-     */
-    const validReturnDate =
-      existingReturnDate && existingReturnDate >= dayDate
-        ? (params.returnDate ?? "")
-        : "";
-
-    goHome(dayDate.toISOString(), validReturnDate);
+    setDepartureDate(dayDate.toISOString());
+    router.back();
   }
 
   function closeCalendar() {
-    goHome();
+    router.back();
   }
 
   return (
@@ -209,17 +170,13 @@ export default function DateScreen() {
                     new Date(monthData.year, monthData.month, day),
                   );
 
-                  /*
-                   * Vergangenheit sperren
-                   */
+                  // Vergangenheit deaktivieren
                   const isPast = dayDate < today;
 
-                  /*
-                   * Bei RETURN zusätzlich:
-                   * alles vor Departure sperren
-                   */
+                  // Bei Return:
+                  // Tage vor Departure deaktivieren
                   const isBeforeDeparture =
-                    isReturnMode && dayDate < departureDate;
+                    isReturnMode && dayDate < parsedDepartureDate;
 
                   const isDisabled = isPast || isBeforeDeparture;
 
@@ -234,16 +191,11 @@ export default function DateScreen() {
                         style={[
                           styles.dayButton,
 
-                          /*
-                           * TODAY bekommt einen roten Rand,
-                           * ABER nur wenn Today nicht gerade
-                           * selbst ausgewählt ist.
-                           */
+                          // Heute nur Rand,
+                          // wenn heute nicht ausgewählt ist
                           isToday && !isSelected && styles.todayButton,
 
-                          /*
-                           * Gewähltes Datum komplett rot.
-                           */
+                          // Auswahl komplett rot
                           isSelected && styles.selectedDayButton,
                         ]}
                         disabled={isDisabled}
