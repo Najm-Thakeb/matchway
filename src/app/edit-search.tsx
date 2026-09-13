@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { useSearchStore } from "../store/searchStore";
 
 const MATCHWAY_RED = "#E63946";
@@ -36,6 +37,8 @@ function formatDate(dateString?: string) {
 }
 
 export default function EditSearchScreen() {
+  const insets = useSafeAreaInsets();
+
   const {
     fromLabel,
     toLabel,
@@ -51,22 +54,28 @@ export default function EditSearchScreen() {
 
   return (
     <View style={styles.overlay}>
-      <SafeAreaView style={styles.panel}>
-        {/* CLOSE */}
+      <View
+        style={[
+          styles.panel,
+          {
+            paddingTop: insets.top + 14,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.closeButton}
-          onPress={() => router.back()}
+          onPress={() => router.dismiss()}
         >
           <Text style={styles.closeText}>×</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>Edit your search</Text>
 
-        <View style={styles.searchCard}>
-          {/* FROM + SWAP */}
-          <View style={styles.locationRow}>
+        <View style={styles.form}>
+          {/* FROM / TO */}
+          <View style={styles.locationsBox}>
             <TouchableOpacity
-              style={styles.locationContent}
+              style={styles.locationRow}
               onPress={() =>
                 router.push({
                   pathname: "/location",
@@ -77,43 +86,43 @@ export default function EditSearchScreen() {
               }
             >
               <Text style={styles.label}>From</Text>
+
               <Text style={styles.value} numberOfLines={1}>
                 {fromLabel}
               </Text>
             </TouchableOpacity>
 
+            <View style={styles.locationDivider} />
+
+            <TouchableOpacity
+              style={styles.locationRow}
+              onPress={() =>
+                router.push({
+                  pathname: "/location",
+                  params: {
+                    mode: "to",
+                  },
+                })
+              }
+            >
+              <Text style={styles.label}>To</Text>
+
+              <Text style={styles.value} numberOfLines={1}>
+                {toLabel}
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.swapButton} onPress={swapLocations}>
-              <View style={styles.swapIcon}>
+              <View style={styles.swapArrows}>
                 <Text style={styles.swapArrow}>↑</Text>
+
                 <Text style={styles.swapArrow}>↓</Text>
               </View>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.divider} />
-
-          {/* TO */}
-          <TouchableOpacity
-            style={styles.normalRow}
-            onPress={() =>
-              router.push({
-                pathname: "/location",
-                params: {
-                  mode: "to",
-                },
-              })
-            }
-          >
-            <Text style={styles.label}>To</Text>
-            <Text style={styles.value} numberOfLines={1}>
-              {toLabel}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          {/* DEPARTURE + RETURN */}
-          <View style={styles.dateRow}>
+          {/* DATE */}
+          <View style={styles.dateBox}>
             <TouchableOpacity
               style={styles.dateItem}
               onPress={() =>
@@ -127,9 +136,7 @@ export default function EditSearchScreen() {
             >
               <Text style={styles.label}>Departure</Text>
 
-              <Text style={styles.value} numberOfLines={1}>
-                {formatDate(departureDate)}
-              </Text>
+              <Text style={styles.value}>{formatDate(departureDate)}</Text>
             </TouchableOpacity>
 
             <View style={styles.verticalDivider} />
@@ -148,14 +155,14 @@ export default function EditSearchScreen() {
               >
                 <Text style={styles.label}>Return</Text>
 
-                <Text style={styles.value} numberOfLines={1}>
+                <Text style={returnDate ? styles.value : styles.placeholder}>
                   {returnDate ? formatDate(returnDate) : "Add return"}
                 </Text>
               </TouchableOpacity>
 
               {returnDate ? (
                 <TouchableOpacity
-                  style={styles.clearReturn}
+                  style={styles.clearReturnButton}
                   onPress={clearReturnDate}
                 >
                   <Text style={styles.clearReturnText}>×</Text>
@@ -164,11 +171,9 @@ export default function EditSearchScreen() {
             </View>
           </View>
 
-          <View style={styles.divider} />
-
           {/* PASSENGERS */}
           <TouchableOpacity
-            style={styles.passengerRow}
+            style={styles.passengerBox}
             onPress={() => router.push("/passengers")}
           >
             <Text style={styles.label}>Passengers</Text>
@@ -176,15 +181,14 @@ export default function EditSearchScreen() {
             <Text style={styles.value}>{passengerText}</Text>
           </TouchableOpacity>
 
-          {/* SEARCH */}
           <TouchableOpacity
             style={styles.searchButton}
-            onPress={() => router.back()}
+            onPress={() => router.dismiss()}
           >
             <Text style={styles.searchButtonText}>Search</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -197,7 +201,7 @@ const styles = StyleSheet.create({
 
   panel: {
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 24,
+    paddingHorizontal: 18,
     paddingBottom: 28,
   },
 
@@ -205,18 +209,19 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
+
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 24,
+
+    marginBottom: 22,
+
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
 
   closeText: {
     fontSize: 32,
-    color: "#111111",
-    lineHeight: 34,
+    color: "#111827",
   },
 
   title: {
@@ -226,44 +231,150 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
 
-  searchCard: {
-    borderWidth: 2,
+  form: {
+    gap: 12,
+  },
+
+  locationsBox: {
+    position: "relative",
+
+    borderWidth: 1.5,
     borderColor: MATCHWAY_RED,
-    borderRadius: 20,
-    overflow: "hidden",
+
+    borderRadius: 18,
+
     backgroundColor: "#FFFFFF",
   },
 
   locationRow: {
+    height: 68,
+
+    justifyContent: "center",
+
+    paddingLeft: 18,
+    paddingRight: 72,
+  },
+
+  locationDivider: {
+    height: 1,
+
+    backgroundColor: "#E5E7EB",
+
+    marginHorizontal: 18,
+  },
+
+  swapButton: {
+    position: "absolute",
+
+    right: 14,
+    top: 43,
+
+    width: 50,
+    height: 50,
+
+    borderRadius: 25,
+
+    backgroundColor: "#FFFFFF",
+
+    borderWidth: 1.5,
+    borderColor: "#D1D5DB",
+
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  swapArrows: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 72,
-    paddingLeft: 18,
-    paddingRight: 10,
   },
 
-  locationContent: {
+  swapArrow: {
+    fontSize: 22,
+    color: MATCHWAY_RED,
+  },
+
+  dateBox: {
+    flexDirection: "row",
+
+    minHeight: 68,
+
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+
+    borderRadius: 16,
+
+    backgroundColor: "#FFFFFF",
+  },
+
+  dateItem: {
     flex: 1,
+
     justifyContent: "center",
-    minHeight: 72,
+
+    paddingHorizontal: 16,
   },
 
-  normalRow: {
-    minHeight: 72,
-    justifyContent: "center",
-    paddingHorizontal: 18,
+  verticalDivider: {
+    width: 1,
+
+    backgroundColor: "#E5E7EB",
+
+    marginVertical: 12,
   },
 
-  passengerRow: {
-    minHeight: 72,
+  returnItem: {
+    flex: 1,
+
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    paddingLeft: 16,
+  },
+
+  returnContent: {
+    flex: 1,
+
     justifyContent: "center",
-    paddingHorizontal: 18,
+
+    minHeight: 68,
+  },
+
+  clearReturnButton: {
+    width: 34,
+    height: 44,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginRight: 5,
+  },
+
+  clearReturnText: {
+    fontSize: 26,
+    color: "#667085",
+  },
+
+  passengerBox: {
+    height: 68,
+
+    justifyContent: "center",
+
+    paddingHorizontal: 16,
+
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+
+    borderRadius: 16,
+
+    backgroundColor: "#FFFFFF",
   },
 
   label: {
     fontSize: 13,
     fontWeight: "600",
     color: "#667085",
+
     marginBottom: 3,
   },
 
@@ -273,76 +384,18 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
-  divider: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-    marginHorizontal: 18,
-  },
-
-  swapButton: {
-    width: 46,
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  swapIcon: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 1,
-  },
-
-  swapArrow: {
-    fontSize: 22,
-    color: MATCHWAY_RED,
-    fontWeight: "500",
-  },
-
-  dateRow: {
-    flexDirection: "row",
-    minHeight: 76,
-    paddingHorizontal: 18,
-  },
-
-  dateItem: {
-    flex: 1,
-    justifyContent: "center",
-  },
-
-  verticalDivider: {
-    width: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: 14,
-    marginHorizontal: 14,
-  },
-
-  returnItem: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  returnContent: {
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 76,
-  },
-
-  clearReturn: {
-    width: 28,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  clearReturnText: {
-    fontSize: 25,
-    color: "#667085",
+  placeholder: {
+    fontSize: 17,
+    color: "#8A9099",
   },
 
   searchButton: {
+    height: 58,
+
     backgroundColor: MATCHWAY_RED,
-    height: 62,
+
+    borderRadius: 18,
+
     alignItems: "center",
     justifyContent: "center",
   },

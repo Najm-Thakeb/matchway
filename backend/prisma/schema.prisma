@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Ride {
+  id String @id @default(uuid())
+
+  fromPlaceId String
+  fromLabel   String
+
+  toPlaceId String
+  toLabel   String
+
+  departureAt DateTime @db.Timestamptz(3)
+  arrivalAt   DateTime @db.Timestamptz(3)
+
+  price          Decimal @db.Decimal(10, 2)
+  availableSeats Int
+
+  driverName String
+  rating     Decimal? @db.Decimal(2, 1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

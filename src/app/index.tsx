@@ -1,7 +1,11 @@
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+
+import BottomNav from "../components/BottomNav";
 import { useSearchStore } from "../store/searchStore";
+
+const MATCHWAY_RED = "#E63946";
 
 function formatDate(dateString?: string) {
   if (!dateString) {
@@ -27,7 +31,7 @@ function formatDate(dateString?: string) {
   }
 
   return selectedDate.toLocaleDateString("en-US", {
-    weekday: "long",
+    weekday: "short",
     day: "numeric",
     month: "short",
   });
@@ -36,13 +40,12 @@ function formatDate(dateString?: string) {
 export default function HomeScreen() {
   const {
     fromLabel,
-    fromPlaceId,
     toLabel,
-    toPlaceId,
     departureDate,
     returnDate,
     passengers,
     clearReturnDate,
+    swapLocations,
   } = useSearchStore();
 
   const departureText = formatDate(departureDate);
@@ -50,172 +53,155 @@ export default function HomeScreen() {
   const returnText = returnDate ? formatDate(returnDate) : "Add return";
 
   const passengerText =
-    passengers === 1 ? "1 passenger" : `${passengers} passengers`;
+    passengers === 1 ? "1 Passenger" : `${passengers} Passengers`;
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.logo}>MatchWay</Text>
+      <View style={styles.content}>
+        <Text style={styles.logo}>MatchWay</Text>
 
-      <View style={styles.searchBox}>
-        {/* FROM */}
-        <TouchableOpacity
-          style={styles.locationItem}
-          onPress={() =>
-            router.push({
-              pathname: "/location",
-              params: {
-                mode: "from",
-
-                fromLabel,
-                fromPlaceId,
-                toLabel,
-                toPlaceId,
-
-                departureDate,
-                returnDate,
-                passengers: String(passengers),
-              },
-            })
-          }
-        >
-          <Text style={styles.label}>From</Text>
-
-          <Text style={fromLabel ? styles.value : styles.locationValue}>
-            {fromLabel || "City, station or place"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* TO */}
-        <TouchableOpacity
-          style={styles.locationItem}
-          onPress={() =>
-            router.push({
-              pathname: "/location",
-              params: {
-                mode: "to",
-
-                fromLabel,
-                fromPlaceId,
-                toLabel,
-                toPlaceId,
-
-                departureDate,
-                returnDate,
-                passengers: String(passengers),
-              },
-            })
-          }
-        >
-          <Text style={styles.label}>To</Text>
-
-          <Text style={toLabel ? styles.value : styles.locationValue}>
-            {toLabel || "City, station or place"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* DEPARTURE + RETURN */}
-        <View style={styles.dateRow}>
-          {/* DEPARTURE */}
-          <TouchableOpacity
-            style={styles.dateItem}
-            onPress={() =>
-              router.push({
-                pathname: "/date",
-                params: {
-                  mode: "departure",
-
-                  fromLabel,
-                  fromPlaceId,
-                  toLabel,
-                  toPlaceId,
-
-                  departureDate,
-                  returnDate,
-                  passengers: String(passengers),
-                },
-              })
-            }
-          >
-            <Text style={styles.label}>Departure</Text>
-            <Text style={styles.value}>{departureText}</Text>
-          </TouchableOpacity>
-
-          {/* RETURN */}
-          <View style={[styles.dateItem, styles.returnItem]}>
+        <View style={styles.form}>
+          {/* FROM + TO */}
+          <View style={styles.locationsBox}>
             <TouchableOpacity
-              style={styles.returnContent}
+              style={styles.locationRow}
               onPress={() =>
                 router.push({
-                  pathname: "/date",
+                  pathname: "/location",
                   params: {
-                    mode: "return",
-
-                    fromLabel,
-                    fromPlaceId,
-                    toLabel,
-                    toPlaceId,
-
-                    departureDate,
-                    returnDate,
-                    passengers: String(passengers),
+                    mode: "from",
                   },
                 })
               }
             >
-              <Text style={styles.label}>Return</Text>
-              <Text style={styles.value}>{returnText}</Text>
+              <Text style={styles.label}>From</Text>
+
+              <Text
+                style={fromLabel ? styles.value : styles.placeholder}
+                numberOfLines={1}
+              >
+                {fromLabel || "City, station or place"}
+              </Text>
             </TouchableOpacity>
 
-            {returnDate ? (
-              <TouchableOpacity
-                style={styles.clearReturnButton}
-                onPress={clearReturnDate}
+            <View style={styles.locationDivider} />
+
+            <TouchableOpacity
+              style={styles.locationRow}
+              onPress={() =>
+                router.push({
+                  pathname: "/location",
+                  params: {
+                    mode: "to",
+                  },
+                })
+              }
+            >
+              <Text style={styles.label}>To</Text>
+
+              <Text
+                style={toLabel ? styles.value : styles.placeholder}
+                numberOfLines={1}
               >
-                <Text style={styles.clearReturnText}>×</Text>
-              </TouchableOpacity>
-            ) : null}
+                {toLabel || "City, station or place"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.swapButton}
+              onPress={swapLocations}
+              activeOpacity={0.8}
+            >
+              <View style={styles.swapArrows}>
+                <Text style={styles.swapArrow}>↑</Text>
+
+                <Text style={styles.swapArrow}>↓</Text>
+              </View>
+            </TouchableOpacity>
           </View>
+
+          {/* DATES */}
+          <View style={styles.dateBox}>
+            <TouchableOpacity
+              style={styles.dateItem}
+              onPress={() =>
+                router.push({
+                  pathname: "/date",
+                  params: {
+                    mode: "departure",
+                  },
+                })
+              }
+            >
+              <Text style={styles.label}>Departure</Text>
+
+              <Text style={styles.value}>{departureText}</Text>
+            </TouchableOpacity>
+
+            <View style={styles.verticalDivider} />
+
+            <View style={styles.returnItem}>
+              <TouchableOpacity
+                style={styles.returnContent}
+                onPress={() =>
+                  router.push({
+                    pathname: "/date",
+                    params: {
+                      mode: "return",
+                    },
+                  })
+                }
+              >
+                <Text style={styles.label}>Return</Text>
+
+                <Text
+                  style={returnDate ? styles.value : styles.placeholder}
+                  numberOfLines={1}
+                >
+                  {returnText}
+                </Text>
+              </TouchableOpacity>
+
+              {returnDate ? (
+                <TouchableOpacity
+                  style={styles.clearReturnButton}
+                  onPress={clearReturnDate}
+                >
+                  <Text style={styles.clearReturnText}>×</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+
+          {/* PASSENGERS */}
+          <TouchableOpacity
+            style={styles.passengerBox}
+            onPress={() => router.push("/passengers")}
+          >
+            <Text style={styles.label}>Passengers</Text>
+
+            <Text style={styles.value}>{passengerText}</Text>
+          </TouchableOpacity>
+
+          {/* SEARCH */}
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={() => {
+              if (!fromLabel || !toLabel) {
+                Alert.alert("Missing location", "Please select From and To.");
+
+                return;
+              }
+
+              router.push("/results");
+            }}
+          >
+            <Text style={styles.searchButtonText}>Search</Text>
+          </TouchableOpacity>
         </View>
-
-        {/* PASSENGERS */}
-        <TouchableOpacity
-          style={styles.passengerItem}
-          onPress={() =>
-            router.push({
-              pathname: "/passengers",
-              params: {
-                fromLabel,
-                fromPlaceId,
-                toLabel,
-                toPlaceId,
-
-                departureDate,
-                returnDate,
-                passengers: String(passengers),
-              },
-            })
-          }
-        >
-          <Text style={styles.label}>Passengers</Text>
-
-          <Text style={styles.value}>{passengerText}</Text>
-        </TouchableOpacity>
-
-        {/* SEARCH */}
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => {
-            if (!fromLabel || !toLabel) {
-              Alert.alert("Missing location", "Please select From and To.");
-              return;
-            }
-
-            router.push("/results");
-          }}
-        >
-          <Text style={styles.buttonText}>Search</Text>
-        </TouchableOpacity>
       </View>
+
+      <BottomNav activeTab="search" />
     </SafeAreaView>
   );
 }
@@ -223,92 +209,201 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: "#FFFFFF",
   },
 
+  content: {
+    flex: 1,
+
+    paddingHorizontal: 18,
+    paddingBottom: 105,
+  },
+
   logo: {
-    fontSize: 33,
-    fontWeight: "bold",
-    marginBottom: 40,
-  },
+    fontSize: 31,
+    fontWeight: "700",
 
-  searchBox: {
-    gap: 20,
-  },
-
-  locationItem: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#DDDDDD",
-  },
-
-  locationValue: {
-    fontSize: 18,
-    color: "#888888",
-  },
-
-  dateRow: {
-    flexDirection: "row",
-    gap: 20,
-  },
-
-  dateItem: {
-    flex: 1,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#DDDDDD",
-  },
-
-  passengerItem: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#DDDDDD",
-  },
-
-  label: {
-    fontSize: 14,
-    color: "#777777",
-    marginBottom: 6,
-  },
-
-  value: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-
-  button: {
-    backgroundColor: "#E63946",
-    padding: 18,
-    borderRadius: 25,
-    alignItems: "center",
     marginTop: 10,
+    marginBottom: 24,
+
+    color: "#111827",
   },
 
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "bold",
+  form: {
+    gap: 12,
   },
 
-  returnItem: {
-    flexDirection: "row",
-    alignItems: "center",
+  locationsBox: {
+    position: "relative",
+
+    borderWidth: 1.5,
+    borderColor: MATCHWAY_RED,
+
+    borderRadius: 18,
+
+    backgroundColor: "#FFFFFF",
   },
 
-  returnContent: {
-    flex: 1,
+  locationRow: {
+    height: 68,
+
+    justifyContent: "center",
+
+    paddingLeft: 18,
+    paddingRight: 72,
   },
 
-  clearReturnButton: {
-    width: 36,
-    height: 36,
+  locationDivider: {
+    height: 1,
+
+    backgroundColor: "#E5E7EB",
+
+    marginLeft: 18,
+    marginRight: 18,
+  },
+
+  swapButton: {
+    position: "absolute",
+
+    right: 14,
+    top: 43,
+
+    width: 50,
+    height: 50,
+
+    borderRadius: 25,
+
+    backgroundColor: "#FFFFFF",
+
+    borderWidth: 1.5,
+    borderColor: "#D1D5DB",
+
     alignItems: "center",
     justifyContent: "center",
   },
 
+  swapArrows: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  swapArrow: {
+    fontSize: 22,
+    color: MATCHWAY_RED,
+    fontWeight: "500",
+  },
+
+  dateBox: {
+    flexDirection: "row",
+
+    minHeight: 68,
+
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+
+    borderRadius: 16,
+
+    backgroundColor: "#FFFFFF",
+  },
+
+  dateItem: {
+    flex: 1,
+
+    justifyContent: "center",
+
+    paddingHorizontal: 16,
+  },
+
+  verticalDivider: {
+    width: 1,
+
+    backgroundColor: "#E5E7EB",
+
+    marginVertical: 12,
+  },
+
+  returnItem: {
+    flex: 1,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    paddingLeft: 16,
+  },
+
+  returnContent: {
+    flex: 1,
+
+    justifyContent: "center",
+
+    minHeight: 68,
+  },
+
+  clearReturnButton: {
+    width: 34,
+    height: 44,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginRight: 5,
+  },
+
   clearReturnText: {
-    fontSize: 30,
+    fontSize: 26,
     color: "#667085",
+  },
+
+  passengerBox: {
+    height: 68,
+
+    justifyContent: "center",
+
+    paddingHorizontal: 16,
+
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+
+    borderRadius: 16,
+
+    backgroundColor: "#FFFFFF",
+  },
+
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#667085",
+
+    marginBottom: 3,
+  },
+
+  value: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#111827",
+  },
+
+  placeholder: {
+    fontSize: 17,
+    color: "#8A9099",
+  },
+
+  searchButton: {
+    height: 58,
+
+    backgroundColor: MATCHWAY_RED,
+
+    borderRadius: 18,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    marginTop: 2,
+  },
+
+  searchButtonText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
   },
 });
