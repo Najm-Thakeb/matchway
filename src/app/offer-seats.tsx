@@ -4,44 +4,52 @@ import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import SeatPicker from "../components/SeatPicker";
-import { useSearchStore } from "../store/searchStore";
+import { useOfferRideStore } from "../store/offerRideStore";
 
 const MATCHWAY_RED = "#E63946";
 
-export default function PassengersScreen() {
-  const { passengers, setPassengers } = useSearchStore();
+export default function OfferSeatsScreen() {
+  const { availableSeats, setAvailableSeats } = useOfferRideStore();
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* BACK */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={25} color="#111827" />
       </TouchableOpacity>
 
-      {/* TITLE */}
-      <Text style={styles.title}>How many seats do you need?</Text>
+      <Text style={styles.title}>How many seats are available?</Text>
 
       <Text style={styles.subtitle}>
-        Choose the number of passengers travelling.
+        Tell passengers how many seats you can offer.
       </Text>
 
-      {/* SAME COMPONENT AS OFFER */}
       <View style={styles.pickerContainer}>
         <SeatPicker
-          value={passengers}
-          onChange={setPassengers}
-          label="Number of passengers"
-          singularLabel="Passenger"
-          pluralLabel="Passengers"
+          value={availableSeats}
+          onChange={setAvailableSeats}
+          label="Available seats"
+          singularLabel="Seat"
+          pluralLabel="Seats"
         />
       </View>
 
-      {/* CONFIRM */}
+      <View style={styles.infoRow}>
+        <Ionicons name="information-circle-outline" size={21} color="#667085" />
+
+        <Text style={styles.infoText}>
+          You can change the number of available seats later.
+        </Text>
+      </View>
+
       <TouchableOpacity
-        style={styles.confirmButton}
-        onPress={() => router.back()}
+        style={styles.continueButton}
+        onPress={() => {
+          router.push("/offer-price");
+        }}
       >
-        <Text style={styles.confirmText}>Confirm</Text>
+        <Text style={styles.continueText}>Continue</Text>
+
+        <Ionicons name="arrow-forward" size={21} color="#FFFFFF" />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -89,7 +97,26 @@ const styles = StyleSheet.create({
     marginTop: 38,
   },
 
-  confirmButton: {
+  infoRow: {
+    marginTop: 20,
+    paddingHorizontal: 4,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 8,
+  },
+
+  infoText: {
+    flex: 1,
+
+    fontSize: 13,
+    lineHeight: 19,
+
+    color: "#667085",
+  },
+
+  continueButton: {
     height: 56,
 
     marginTop: "auto",
@@ -99,11 +126,14 @@ const styles = StyleSheet.create({
 
     backgroundColor: MATCHWAY_RED,
 
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+
+    gap: 8,
   },
 
-  confirmText: {
+  continueText: {
     fontSize: 17,
     fontWeight: "700",
 

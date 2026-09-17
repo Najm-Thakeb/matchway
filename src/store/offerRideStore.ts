@@ -1,5 +1,12 @@
 import { create } from "zustand";
 
+type Stop = {
+  label: string;
+  placeId: string;
+};
+
+type BookingPreference = "" | "instant" | "review";
+
 type OfferRideState = {
   fromLabel: string;
   fromPlaceId: string;
@@ -16,6 +23,20 @@ type OfferRideState = {
   routeDistanceMeters: number;
   routeDurationSeconds: number;
 
+  stops: Stop[];
+
+  departureDate: string;
+  departureTime: string;
+
+  availableSeats: number;
+
+  pricePerSeat: number;
+  currency: string;
+
+  bookingPreference: BookingPreference;
+
+  rideComment: string;
+
   setFrom: (label: string, placeId: string) => void;
 
   setPickup: (label: string, placeId: string) => void;
@@ -25,6 +46,26 @@ type OfferRideState = {
   setDropoff: (label: string, placeId: string) => void;
 
   setRouteSummary: (distanceMeters: number, durationSeconds: number) => void;
+
+  addStop: (label: string, placeId: string) => void;
+
+  removeStop: (placeId: string) => void;
+
+  clearStops: () => void;
+
+  setDepartureDate: (date: string) => void;
+
+  setDepartureTime: (time: string) => void;
+
+  setAvailableSeats: (seats: number) => void;
+
+  setPricePerSeat: (price: number) => void;
+
+  setCurrency: (currency: string) => void;
+
+  setBookingPreference: (preference: BookingPreference) => void;
+
+  setRideComment: (comment: string) => void;
 
   clearOffer: () => void;
 };
@@ -44,6 +85,20 @@ export const useOfferRideStore = create<OfferRideState>((set) => ({
 
   routeDistanceMeters: 0,
   routeDurationSeconds: 0,
+
+  stops: [],
+
+  departureDate: "",
+  departureTime: "",
+
+  availableSeats: 1,
+
+  pricePerSeat: 0,
+  currency: "JOD",
+
+  bookingPreference: "",
+
+  rideComment: "",
 
   setFrom: (label, placeId) =>
     set({
@@ -76,6 +131,62 @@ export const useOfferRideStore = create<OfferRideState>((set) => ({
       routeDurationSeconds: durationSeconds,
     }),
 
+  addStop: (label, placeId) =>
+    set((state) => ({
+      stops: [
+        ...state.stops,
+        {
+          label,
+          placeId,
+        },
+      ],
+    })),
+
+  removeStop: (placeId) =>
+    set((state) => ({
+      stops: state.stops.filter((stop) => stop.placeId !== placeId),
+    })),
+
+  clearStops: () =>
+    set({
+      stops: [],
+    }),
+
+  setDepartureDate: (date) =>
+    set({
+      departureDate: date,
+    }),
+
+  setDepartureTime: (time) =>
+    set({
+      departureTime: time,
+    }),
+
+  setAvailableSeats: (seats) =>
+    set({
+      availableSeats: seats,
+    }),
+
+  setPricePerSeat: (price) =>
+    set({
+      pricePerSeat: price,
+    }),
+
+  setCurrency: (currency) =>
+    set({
+      currency,
+    }),
+
+  setBookingPreference: (preference) =>
+    set({
+      bookingPreference: preference,
+    }),
+
+  setRideComment: (comment) =>
+    set({
+      rideComment: comment,
+    }),
+
   clearOffer: () =>
     set({
       fromLabel: "",
@@ -92,5 +203,19 @@ export const useOfferRideStore = create<OfferRideState>((set) => ({
 
       routeDistanceMeters: 0,
       routeDurationSeconds: 0,
+
+      stops: [],
+
+      departureDate: "",
+      departureTime: "",
+
+      availableSeats: 1,
+
+      pricePerSeat: 0,
+      currency: "JOD",
+
+      bookingPreference: "",
+
+      rideComment: "",
     }),
 }));

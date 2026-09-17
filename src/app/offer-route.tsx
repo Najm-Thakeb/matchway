@@ -177,9 +177,8 @@ export default function OfferRouteScreen() {
       selectedRoute.durationSeconds,
     );
 
-    Alert.alert("Route saved", "Your selected route was saved successfully.");
+    router.push("/offer-stops");
   }
-
   const startCoordinate = selectedRoute?.coordinates[0];
 
   const endCoordinate =
