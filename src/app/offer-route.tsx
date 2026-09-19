@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,8 +9,8 @@ import {
   View,
 } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -91,14 +90,34 @@ export default function OfferRouteScreen() {
 
   const selectedRoute = routes[selectedRouteIndex];
 
+  /*
+   * Route nur laden,
+   * wenn Pickup UND Drop-off vorhanden sind.
+   *
+   * Nach Publish wird clearOffer() ausgeführt.
+   * Dadurch werden die Place IDs leer.
+   *
+   * Ohne diese Prüfung würde der Screen
+   * erneut einen ungültigen Routing-Request
+   * senden.
+   */
   useEffect(() => {
+    if (!pickupPlaceId || !dropoffPlaceId) {
+      setRoutes([]);
+      setSelectedRouteIndex(0);
+      setLoading(false);
+      setError("");
+
+      return;
+    }
+
     loadRoutes();
   }, [pickupPlaceId, dropoffPlaceId]);
 
   /*
-    Wenn der Fahrer eine andere Route auswählt,
-    zoomen wir die Karte auf genau diese Route.
-  */
+   * Wenn der Fahrer eine andere Route auswählt,
+   * zoomen wir die Karte auf genau diese Route.
+   */
   useEffect(() => {
     if (!selectedRoute || selectedRoute.coordinates.length < 2) {
       return;
@@ -121,6 +140,23 @@ export default function OfferRouteScreen() {
   }, [selectedRoute]);
 
   async function loadRoutes() {
+    /*
+     * Zweite Sicherheitsprüfung.
+     *
+     * Auch wenn loadRoutes() später
+     * z.B. über "Try again" aufgerufen wird,
+     * senden wir niemals einen Request
+     * mit leeren Place IDs.
+     */
+    if (!pickupPlaceId || !dropoffPlaceId) {
+      setRoutes([]);
+      setSelectedRouteIndex(0);
+      setLoading(false);
+      setError("");
+
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -145,10 +181,10 @@ export default function OfferRouteScreen() {
       setRoutes(data.routes);
 
       /*
-        Wenn Google eine Route als
-        DEFAULT_ROUTE markiert hat,
-        wählen wir sie zuerst aus.
-      */
+       * Wenn Google eine Route als
+       * DEFAULT_ROUTE markiert hat,
+       * wählen wir sie zuerst aus.
+       */
       const defaultIndex = data.routes.findIndex((route) => route.isDefault);
 
       setSelectedRouteIndex(defaultIndex >= 0 ? defaultIndex : 0);
@@ -179,6 +215,7 @@ export default function OfferRouteScreen() {
 
     router.push("/offer-stops");
   }
+
   const startCoordinate = selectedRoute?.coordinates[0];
 
   const endCoordinate =
@@ -301,6 +338,7 @@ export default function OfferRouteScreen() {
                   key={route.id}
                   style={[
                     styles.routeOption,
+
                     selected && styles.routeOptionSelected,
                   ]}
                   onPress={() => selectRoute(index)}
@@ -310,6 +348,7 @@ export default function OfferRouteScreen() {
                     <View
                       style={[
                         styles.radioOuter,
+
                         selected && styles.radioOuterSelected,
                       ]}
                     >
@@ -437,7 +476,12 @@ const styles = StyleSheet.create({
   },
 
   mapLoading: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
 
     alignItems: "center",
     justifyContent: "center",

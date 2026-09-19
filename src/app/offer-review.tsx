@@ -1,4 +1,9 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
+import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,8 +14,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { useOfferRideStore } from "../store/offerRideStore";
 
@@ -22,6 +25,7 @@ function formatDistance(distanceMeters: number) {
 
 function formatDuration(durationSeconds: number) {
   const hours = Math.floor(durationSeconds / 3600);
+
   const minutes = Math.round((durationSeconds % 3600) / 60);
 
   if (hours === 0) {
@@ -45,10 +49,41 @@ function formatDate(dateString: string) {
   });
 }
 
+/*
+ * Unser Store speichert das Datum als ISO-String.
+ *
+ * Das Backend erwartet aber:
+ * YYYY-MM-DD
+ *
+ * Beispiel:
+ * 2026-09-20
+ */
+function formatDateForBackend(dateString: string) {
+  const date = new Date(dateString);
+
+  const year = date.getFullYear();
+
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export default function OfferReviewScreen() {
   const {
+    fromLabel,
+    fromPlaceId,
+
     pickupLabel,
+    pickupPlaceId,
+
+    toLabel,
+    toPlaceId,
+
     dropoffLabel,
+    dropoffPlaceId,
+
     stops,
 
     routeDistanceMeters,
@@ -66,10 +101,102 @@ export default function OfferReviewScreen() {
 
     rideComment,
     setRideComment,
+
+    clearOffer,
   } = useOfferRideStore();
+
+  const [publishing, setPublishing] = useState(false);
 
   const bookingText =
     bookingPreference === "instant" ? "Instant booking" : "Review requests";
+
+  async function publishRide() {
+    if (publishing) {
+      return;
+    }
+
+    try {
+      setPublishing(true);
+
+      const response = await fetch("http://localhost:3000/rides", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          fromPlaceId,
+          fromLabel,
+
+          pickupPlaceId,
+          pickupLabel,
+
+          toPlaceId,
+          toLabel,
+
+          dropoffPlaceId,
+          dropoffLabel,
+
+          departureDate: formatDateForBackend(departureDate),
+
+          departureTime,
+
+          routeDistanceMeters,
+          routeDurationSeconds,
+
+          availableSeats,
+
+          pricePerSeat: Number(pricePerSeat),
+
+          currency,
+
+          bookingPreference,
+
+          comment: rideComment.trim(),
+
+          stops: stops.map((stop) => ({
+            placeId: stop.placeId,
+
+            label: stop.label,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not publish ride.");
+      }
+
+      /*
+       * Fahrt wurde erfolgreich
+       * in PostgreSQL gespeichert.
+       */
+      clearOffer();
+
+      Alert.alert(
+        "Ride published",
+        "Your ride has been published successfully.",
+        [
+          {
+            text: "Done",
+
+            onPress: () => router.replace("/"),
+          },
+        ],
+      );
+    } catch (error) {
+      console.error("Publish ride error:", error);
+
+      Alert.alert(
+        "Could not publish ride",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -264,18 +391,27 @@ export default function OfferReviewScreen() {
 
         {/* PUBLISH */}
         <TouchableOpacity
-          style={styles.publishButton}
-          onPress={() => {
-            /*
-              Next:
-              Save ride with NestJS
-              + Prisma + PostgreSQL.
-            */
-          }}
-        >
-          <Text style={styles.publishText}>Publish ride</Text>
+          style={[
+            styles.publishButton,
 
-          <Ionicons name="checkmark" size={22} color="#FFFFFF" />
+            publishing && styles.publishButtonDisabled,
+          ]}
+          disabled={publishing}
+          onPress={publishRide}
+        >
+          {publishing ? (
+            <>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+
+              <Text style={styles.publishText}>Publishing...</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.publishText}>Publish ride</Text>
+
+              <Ionicons name="checkmark" size={22} color="#FFFFFF" />
+            </>
+          )}
         </TouchableOpacity>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -285,17 +421,20 @@ export default function OfferReviewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+
     backgroundColor: "#FFFFFF",
   },
 
   keyboardContainer: {
     flex: 1,
+
     paddingHorizontal: 20,
   },
 
   backButton: {
     width: 44,
     height: 44,
+
     marginTop: 6,
 
     borderRadius: 22,
@@ -323,6 +462,7 @@ const styles = StyleSheet.create({
 
   card: {
     marginBottom: 14,
+
     padding: 18,
 
     borderRadius: 20,
@@ -413,6 +553,7 @@ const styles = StyleSheet.create({
 
   stopsBox: {
     marginTop: 18,
+
     padding: 13,
 
     borderRadius: 14,
@@ -552,6 +693,7 @@ const styles = StyleSheet.create({
     minHeight: 115,
 
     marginTop: 14,
+
     padding: 14,
 
     borderWidth: 1.5,
@@ -596,6 +738,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
 
     gap: 8,
+  },
+
+  publishButtonDisabled: {
+    opacity: 0.65,
   },
 
   publishText: {

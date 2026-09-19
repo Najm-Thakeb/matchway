@@ -7,24 +7,76 @@ datasource db {
   provider = "postgresql"
 }
 
+enum BookingPreference {
+  INSTANT
+  REVIEW
+}
+
 model Ride {
   id String @id @default(uuid())
 
+  // Stadt, von der die Fahrt startet
   fromPlaceId String
   fromLabel   String
 
+  // Exakter Treffpunkt
+  pickupPlaceId String?
+  pickupLabel   String?
+
+  // Zielstadt
   toPlaceId String
   toLabel   String
 
+  // Exakter Ausstiegspunkt
+  dropoffPlaceId String?
+  dropoffLabel   String?
+
+  // Datum + Uhrzeit
   departureAt DateTime @db.Timestamptz(3)
   arrivalAt   DateTime @db.Timestamptz(3)
 
-  price          Decimal @db.Decimal(10, 2)
+  // Route
+  routeDistanceMeters  Int?
+  routeDurationSeconds Int?
+
+  // Preis
+  price    Decimal @db.Decimal(10, 2)
+  currency String  @default("JOD")
+
+  // Plätze
   availableSeats Int
 
+  // Buchung
+  bookingPreference BookingPreference?
+
+  // Optionaler Kommentar
+  comment String?
+
+  // Fahrer
   driverName String
   rating     Decimal? @db.Decimal(2, 1)
 
+  // Zwischenstopps
+  stops RideStop[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+model RideStop {
+  id String @id @default(uuid())
+
+  rideId String
+
+  placeId String
+  label   String
+
+  // Reihenfolge:
+  // 1 = erster Stop
+  // 2 = zweiter Stop usw.
+  position Int
+
+  ride Ride @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  @@unique([rideId, position])
+  @@index([rideId])
 }
