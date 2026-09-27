@@ -19,7 +19,7 @@ model Ride {
   fromPlaceId String
   fromLabel   String
 
-  // Exakter Treffpunkt
+  // Exakter Treffpunkt am Start
   pickupPlaceId String?
   pickupLabel   String?
 
@@ -62,17 +62,22 @@ model Ride {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
 model RideStop {
   id String @id @default(uuid())
 
   rideId String
 
+  // Stop-Stadt
   placeId String
   label   String
 
-  // Reihenfolge:
-  // 1 = erster Stop
-  // 2 = zweiter Stop usw.
+  // Tatsächlicher Treffpunkt
+  meetingPointPlaceId String?
+  meetingPointLabel   String?
+  meetingPointAddress String?
+
+  // 1 = erster Stop, 2 = zweiter Stop usw.
   position Int
 
   ride Ride @relation(fields: [rideId], references: [id], onDelete: Cascade)

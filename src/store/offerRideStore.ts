@@ -1,8 +1,19 @@
 import { create } from "zustand";
 
+type RouteCoordinate = {
+  latitude: number;
+  longitude: number;
+};
+
 type Stop = {
   label: string;
   placeId: string;
+
+  routePositionMeters: number | null;
+
+  meetingPointLabel: string;
+  meetingPointPlaceId: string;
+  meetingPointAddress: string;
 };
 
 type BookingPreference = "" | "instant" | "review";
@@ -20,8 +31,12 @@ type OfferRideState = {
   dropoffLabel: string;
   dropoffPlaceId: string;
 
+  selectedRouteId: string;
+
   routeDistanceMeters: number;
   routeDurationSeconds: number;
+
+  routeCoordinates: RouteCoordinate[];
 
   stops: Stop[];
 
@@ -47,11 +62,37 @@ type OfferRideState = {
 
   setRouteSummary: (distanceMeters: number, durationSeconds: number) => void;
 
-  addStop: (label: string, placeId: string) => void;
+  setSelectedRoute: (
+    routeId: string,
+    distanceMeters: number,
+    durationSeconds: number,
+    coordinates: RouteCoordinate[],
+  ) => void;
+
+  addStop: (
+    label: string,
+    placeId: string,
+    routePositionMeters?: number | null,
+  ) => void;
 
   removeStop: (placeId: string) => void;
 
   clearStops: () => void;
+
+  /*
+   * Neu:
+   *
+   * Google gibt uns die echte
+   * optimale Reihenfolge.
+   */
+  reorderStops: (orderedPlaceIds: string[]) => void;
+
+  setStopMeetingPoint: (
+    stopPlaceId: string,
+    meetingPointLabel: string,
+    meetingPointPlaceId: string,
+    meetingPointAddress?: string,
+  ) => void;
 
   setDepartureDate: (date: string) => void;
 
@@ -83,8 +124,12 @@ export const useOfferRideStore = create<OfferRideState>((set) => ({
   dropoffLabel: "",
   dropoffPlaceId: "",
 
+  selectedRouteId: "",
+
   routeDistanceMeters: 0,
   routeDurationSeconds: 0,
+
+  routeCoordinates: [],
 
   stops: [],
 
@@ -109,18 +154,21 @@ export const useOfferRideStore = create<OfferRideState>((set) => ({
   setPickup: (label, placeId) =>
     set({
       pickupLabel: label,
+
       pickupPlaceId: placeId,
     }),
 
   setTo: (label, placeId) =>
     set({
       toLabel: label,
+
       toPlaceId: placeId,
     }),
 
   setDropoff: (label, placeId) =>
     set({
       dropoffLabel: label,
+
       dropoffPlaceId: placeId,
     }),
 
@@ -131,16 +179,62 @@ export const useOfferRideStore = create<OfferRideState>((set) => ({
       routeDurationSeconds: durationSeconds,
     }),
 
-  addStop: (label, placeId) =>
-    set((state) => ({
-      stops: [
+  setSelectedRoute: (routeId, distanceMeters, durationSeconds, coordinates) =>
+    set({
+      selectedRouteId: routeId,
+
+      routeDistanceMeters: distanceMeters,
+
+      routeDurationSeconds: durationSeconds,
+
+      routeCoordinates: coordinates,
+    }),
+
+  addStop: (label, placeId, routePositionMeters = null) =>
+    set((state) => {
+      const exists = state.stops.some((stop) => stop.placeId === placeId);
+
+      if (exists) {
+        return state;
+      }
+
+      const updatedStops = [
         ...state.stops,
+
         {
           label,
           placeId,
+
+          routePositionMeters,
+
+          meetingPointLabel: "",
+
+          meetingPointPlaceId: "",
+
+          meetingPointAddress: "",
         },
-      ],
-    })),
+      ];
+
+      updatedStops.sort((a, b) => {
+        if (a.routePositionMeters !== null && b.routePositionMeters !== null) {
+          return a.routePositionMeters - b.routePositionMeters;
+        }
+
+        if (a.routePositionMeters === null && b.routePositionMeters !== null) {
+          return 1;
+        }
+
+        if (a.routePositionMeters !== null && b.routePositionMeters === null) {
+          return -1;
+        }
+
+        return 0;
+      });
+
+      return {
+        stops: updatedStops,
+      };
+    }),
 
   removeStop: (placeId) =>
     set((state) => ({
@@ -151,6 +245,57 @@ export const useOfferRideStore = create<OfferRideState>((set) => ({
     set({
       stops: [],
     }),
+
+  /*
+   * Google-Reihenfolge
+   * dauerhaft übernehmen.
+   */
+  reorderStops: (orderedPlaceIds) =>
+    set((state) => {
+      const stopMap = new Map(state.stops.map((stop) => [stop.placeId, stop]));
+
+      const ordered = orderedPlaceIds
+        .map((placeId) => stopMap.get(placeId))
+        .filter((stop): stop is Stop => Boolean(stop));
+
+      /*
+       * Sicherheits-Fallback:
+       * Falls irgendein Stop
+       * nicht in Googles Antwort
+       * enthalten wäre.
+       */
+      const remaining = state.stops.filter(
+        (stop) => !orderedPlaceIds.includes(stop.placeId),
+      );
+
+      return {
+        stops: [...ordered, ...remaining],
+      };
+    }),
+
+  setStopMeetingPoint: (
+    stopPlaceId,
+    meetingPointLabel,
+    meetingPointPlaceId,
+    meetingPointAddress = "",
+  ) =>
+    set((state) => ({
+      stops: state.stops.map((stop) => {
+        if (stop.placeId !== stopPlaceId) {
+          return stop;
+        }
+
+        return {
+          ...stop,
+
+          meetingPointLabel,
+
+          meetingPointPlaceId,
+
+          meetingPointAddress,
+        };
+      }),
+    })),
 
   setDepartureDate: (date) =>
     set({
@@ -201,8 +346,13 @@ export const useOfferRideStore = create<OfferRideState>((set) => ({
       dropoffLabel: "",
       dropoffPlaceId: "",
 
+      selectedRouteId: "",
+
       routeDistanceMeters: 0,
+
       routeDurationSeconds: 0,
+
+      routeCoordinates: [],
 
       stops: [],
 

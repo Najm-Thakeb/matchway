@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useOfferRideStore } from "../store/offerRideStore";
@@ -50,13 +52,11 @@ function formatDate(dateString: string) {
 }
 
 /*
- * Unser Store speichert das Datum als ISO-String.
+ * Store:
+ * ISO-String
  *
- * Das Backend erwartet aber:
+ * Backend:
  * YYYY-MM-DD
- *
- * Beispiel:
- * 2026-09-20
  */
 function formatDateForBackend(dateString: string) {
   const date = new Date(dateString);
@@ -126,25 +126,41 @@ export default function OfferReviewScreen() {
         },
 
         body: JSON.stringify({
+          /*
+           * START
+           */
           fromPlaceId,
           fromLabel,
 
           pickupPlaceId,
           pickupLabel,
 
+          /*
+           * ZIEL
+           */
           toPlaceId,
           toLabel,
 
           dropoffPlaceId,
           dropoffLabel,
 
+          /*
+           * DATUM + ZEIT
+           */
           departureDate: formatDateForBackend(departureDate),
 
           departureTime,
 
+          /*
+           * FINALE ROUTE
+           */
           routeDistanceMeters,
+
           routeDurationSeconds,
 
+          /*
+           * FAHRTDATEN
+           */
           availableSeats,
 
           pricePerSeat: Number(pricePerSeat),
@@ -155,10 +171,25 @@ export default function OfferReviewScreen() {
 
           comment: rideComment.trim(),
 
+          /*
+           * ==================================
+           * STOPS + MEETING POINTS
+           * ==================================
+           *
+           * Die Reihenfolge des Arrays
+           * entspricht bereits der
+           * tatsächlichen Fahrreihenfolge.
+           */
           stops: stops.map((stop) => ({
             placeId: stop.placeId,
 
             label: stop.label,
+
+            meetingPointPlaceId: stop.meetingPointPlaceId,
+
+            meetingPointLabel: stop.meetingPointLabel,
+
+            meetingPointAddress: stop.meetingPointAddress,
           })),
         }),
       });
@@ -171,13 +202,16 @@ export default function OfferReviewScreen() {
 
       /*
        * Fahrt wurde erfolgreich
-       * in PostgreSQL gespeichert.
+       * inklusive Stops und
+       * Treffpunkten gespeichert.
        */
       clearOffer();
 
       Alert.alert(
         "Ride published",
+
         "Your ride has been published successfully.",
+
         [
           {
             text: "Done",
@@ -191,6 +225,7 @@ export default function OfferReviewScreen() {
 
       Alert.alert(
         "Could not publish ride",
+
         error instanceof Error ? error.message : "Please try again.",
       );
     } finally {
@@ -251,14 +286,52 @@ export default function OfferReviewScreen() {
               </View>
             </View>
 
+            {/* STOPS */}
             {stops.length > 0 ? (
               <View style={styles.stopsBox}>
                 <Text style={styles.smallLabel}>Stops</Text>
 
                 {stops.map((stop, index) => (
-                  <Text key={stop.placeId} style={styles.stopText}>
-                    {index + 1}. {stop.label}
-                  </Text>
+                  <View
+                    key={stop.placeId}
+                    style={[
+                      styles.stopItem,
+
+                      index < stops.length - 1 && styles.stopItemBorder,
+                    ]}
+                  >
+                    <View style={styles.stopHeader}>
+                      <View style={styles.stopNumber}>
+                        <Text style={styles.stopNumberText}>{index + 1}</Text>
+                      </View>
+
+                      <Text style={styles.stopText}>
+                        {stop.label.split(",")[0]}
+                      </Text>
+                    </View>
+
+                    {stop.meetingPointLabel ? (
+                      <View style={styles.meetingPointRow}>
+                        <Ionicons
+                          name="location-outline"
+                          size={17}
+                          color={MATCHWAY_RED}
+                        />
+
+                        <View style={styles.meetingPointTextContainer}>
+                          <Text style={styles.meetingPointLabel}>
+                            {stop.meetingPointLabel}
+                          </Text>
+
+                          {stop.meetingPointAddress ? (
+                            <Text style={styles.meetingPointAddress}>
+                              {stop.meetingPointAddress}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    ) : null}
+                  </View>
                 ))}
               </View>
             ) : null}
@@ -356,7 +429,7 @@ export default function OfferReviewScreen() {
             </View>
           </View>
 
-          {/* OPTIONAL COMMENT */}
+          {/* COMMENT */}
           <View style={styles.card}>
             <View style={styles.commentHeader}>
               <Text style={styles.sectionTitleNoMargin}>
@@ -383,7 +456,10 @@ export default function OfferReviewScreen() {
               textAlignVertical="top"
             />
 
-            <Text style={styles.characterCount}>{rideComment.length}/300</Text>
+            <Text style={styles.characterCount}>
+              {rideComment.length}
+              /300
+            </Text>
           </View>
 
           <View style={styles.bottomSpace} />
@@ -551,6 +627,9 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
+  /*
+   * Neue Stop-Darstellung.
+   */
   stopsBox: {
     marginTop: 18,
 
@@ -561,12 +640,79 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
   },
 
+  stopItem: {
+    paddingVertical: 11,
+  },
+
+  stopItemBorder: {
+    borderBottomWidth: 1,
+
+    borderBottomColor: "#EAECF0",
+  },
+
+  stopHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 9,
+  },
+
+  stopNumber: {
+    width: 24,
+    height: 24,
+
+    borderRadius: 12,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    backgroundColor: MATCHWAY_RED,
+  },
+
+  stopNumberText: {
+    fontSize: 11,
+    fontWeight: "800",
+
+    color: "#FFFFFF",
+  },
+
   stopText: {
-    marginTop: 5,
+    flex: 1,
 
     fontSize: 14,
+    fontWeight: "700",
 
     color: "#344054",
+  },
+
+  meetingPointRow: {
+    marginTop: 8,
+    marginLeft: 33,
+
+    flexDirection: "row",
+    alignItems: "flex-start",
+
+    gap: 7,
+  },
+
+  meetingPointTextContainer: {
+    flex: 1,
+  },
+
+  meetingPointLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+
+    color: "#111827",
+  },
+
+  meetingPointAddress: {
+    marginTop: 2,
+
+    fontSize: 12,
+    lineHeight: 17,
+
+    color: "#667085",
   },
 
   routeInfoRow: {

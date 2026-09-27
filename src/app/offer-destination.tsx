@@ -1,3 +1,6 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -8,10 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { useOfferRideStore } from "../store/offerRideStore";
 

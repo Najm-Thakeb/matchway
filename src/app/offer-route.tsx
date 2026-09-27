@@ -34,6 +34,7 @@ type RouteOption = {
 type RouteResponse = {
   distanceMeters: number;
   durationSeconds: number;
+
   coordinates: LatLng[];
 
   routes: RouteOption[];
@@ -77,7 +78,10 @@ export default function OfferRouteScreen() {
     dropoffLabel,
     dropoffPlaceId,
 
-    setRouteSummary,
+    selectedRouteId,
+
+    setSelectedRoute,
+    clearStops,
   } = useOfferRideStore();
 
   const [routes, setRoutes] = useState<RouteOption[]>([]);
@@ -91,20 +95,19 @@ export default function OfferRouteScreen() {
   const selectedRoute = routes[selectedRouteIndex];
 
   /*
-   * Route nur laden,
-   * wenn Pickup UND Drop-off vorhanden sind.
+   * Route laden.
    *
-   * Nach Publish wird clearOffer() ausgeführt.
-   * Dadurch werden die Place IDs leer.
+   * Wichtig:
+   * Hier gibt es noch KEINE Stops.
    *
-   * Ohne diese Prüfung würde der Screen
-   * erneut einen ungültigen Routing-Request
-   * senden.
+   * Der Fahrer entscheidet zuerst,
+   * welche Route er fahren möchte.
    */
   useEffect(() => {
     if (!pickupPlaceId || !dropoffPlaceId) {
       setRoutes([]);
       setSelectedRouteIndex(0);
+
       setLoading(false);
       setError("");
 
@@ -115,8 +118,8 @@ export default function OfferRouteScreen() {
   }, [pickupPlaceId, dropoffPlaceId]);
 
   /*
-   * Wenn der Fahrer eine andere Route auswählt,
-   * zoomen wir die Karte auf genau diese Route.
+   * Karte auf die aktuell
+   * ausgewählte Route zoomen.
    */
   useEffect(() => {
     if (!selectedRoute || selectedRoute.coordinates.length < 2) {
@@ -140,17 +143,10 @@ export default function OfferRouteScreen() {
   }, [selectedRoute]);
 
   async function loadRoutes() {
-    /*
-     * Zweite Sicherheitsprüfung.
-     *
-     * Auch wenn loadRoutes() später
-     * z.B. über "Try again" aufgerufen wird,
-     * senden wir niemals einen Request
-     * mit leeren Place IDs.
-     */
     if (!pickupPlaceId || !dropoffPlaceId) {
       setRoutes([]);
       setSelectedRouteIndex(0);
+
       setLoading(false);
       setError("");
 
@@ -161,12 +157,30 @@ export default function OfferRouteScreen() {
       setLoading(true);
       setError("");
 
-      const url =
-        `http://localhost:3000/routing` +
-        `?originPlaceId=${encodeURIComponent(pickupPlaceId)}` +
-        `&destinationPlaceId=${encodeURIComponent(dropoffPlaceId)}`;
+      /*
+       * Nur:
+       *
+       * Pickup
+       * →
+       * Drop-off
+       *
+       * Noch keine Zwischenstopps.
+       */
+      const response = await fetch("http://localhost:3000/routing", {
+        method: "POST",
 
-      const response = await fetch(url);
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          originPlaceId: pickupPlaceId,
+
+          destinationPlaceId: dropoffPlaceId,
+
+          intermediatePlaceIds: [],
+        }),
+      });
 
       if (!response.ok) {
         throw new Error("Route request failed");
@@ -180,11 +194,6 @@ export default function OfferRouteScreen() {
 
       setRoutes(data.routes);
 
-      /*
-       * Wenn Google eine Route als
-       * DEFAULT_ROUTE markiert hat,
-       * wählen wir sie zuerst aus.
-       */
       const defaultIndex = data.routes.findIndex((route) => route.isDefault);
 
       setSelectedRouteIndex(defaultIndex >= 0 ? defaultIndex : 0);
@@ -208,11 +217,31 @@ export default function OfferRouteScreen() {
       return;
     }
 
-    setRouteSummary(
+    /*
+     * Wenn der Fahrer eine andere
+     * Route auswählt, passen eventuell
+     * vorher ausgewählte Stops nicht mehr.
+     */
+    if (selectedRouteId !== selectedRoute.id) {
+      clearStops();
+    }
+
+    /*
+     * Jetzt speichern wir nicht nur
+     * Distanz + Zeit,
+     * sondern die komplette Route.
+     */
+    setSelectedRoute(
+      selectedRoute.id,
       selectedRoute.distanceMeters,
       selectedRoute.durationSeconds,
+      selectedRoute.coordinates,
     );
 
+    /*
+     * Nächster Schritt:
+     * Städte entlang dieser Route.
+     */
     router.push("/offer-stops");
   }
 
@@ -245,6 +274,7 @@ export default function OfferRouteScreen() {
           initialRegion={{
             latitude: 31.95,
             longitude: 35.91,
+
             latitudeDelta: 4,
             longitudeDelta: 4,
           }}
@@ -287,7 +317,7 @@ export default function OfferRouteScreen() {
             </Marker>
           ) : null}
 
-          {/* DROP OFF */}
+          {/* DROP-OFF */}
           {endCoordinate ? (
             <Marker
               coordinate={endCoordinate}
@@ -420,7 +450,9 @@ export default function OfferRouteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+
     backgroundColor: "#FFFFFF",
+
     paddingHorizontal: 20,
   },
 
@@ -455,6 +487,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
 
     fontSize: 14,
+
     color: "#667085",
   },
 
@@ -493,6 +526,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
 
     fontSize: 14,
+
     color: "#667085",
   },
 
@@ -559,6 +593,7 @@ const styles = StyleSheet.create({
 
   routeOptionSelected: {
     borderWidth: 1.5,
+
     borderColor: MATCHWAY_RED,
 
     backgroundColor: "#FFF7F7",
@@ -705,6 +740,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
 
     fontSize: 14,
+
     color: "#667085",
   },
 

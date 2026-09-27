@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import Ionicons from "@expo/vector-icons/Ionicons";
 
+import BottomNav from "../components/BottomNav";
 import { useOfferRideStore } from "../store/offerRideStore";
 
 const MATCHWAY_RED = "#E63946";
@@ -57,21 +59,25 @@ export default function OfferScreen() {
     if (query.length < 2) {
       setSuggestions([]);
       setLoading(false);
+
       return;
     }
 
     if (activeField === "city" && query === fromLabel) {
       setSuggestions([]);
+
       return;
     }
 
     if (activeField === "pickup" && query === pickupLabel) {
       setSuggestions([]);
+
       return;
     }
 
     if (activeField === "pickup" && !fromPlaceId) {
       setSuggestions([]);
+
       return;
     }
 
@@ -80,17 +86,17 @@ export default function OfferScreen() {
         setLoading(true);
 
         /*
-            Beim genauen Abholpunkt hängen wir
-            die ausgewählte Stadt an.
-
-            Beispiel:
-            "7th Circle"
-                 ↓
-            "7th Circle, Amman, Jordan"
-
-            Dadurch bekommt Google passendere
-            Ergebnisse.
-          */
+         * Beim genauen Abholpunkt hängen wir
+         * die ausgewählte Stadt an.
+         *
+         * Beispiel:
+         * "7th Circle"
+         * ↓
+         * "7th Circle, Amman, Jordan"
+         *
+         * Dadurch bekommt Google passendere
+         * Ergebnisse.
+         */
         const searchQuery =
           activeField === "pickup" ? `${query}, ${fromLabel}` : query;
 
@@ -130,9 +136,9 @@ export default function OfferScreen() {
       setCityQuery(label);
 
       /*
-        Wenn die Stadt geändert wird,
-        ist der alte Pickup nicht mehr gültig.
-      */
+       * Wenn die Stadt geändert wird,
+       * ist der alte Pickup nicht mehr gültig.
+       */
       setPickup("", "");
       setPickupQuery("");
 
@@ -160,11 +166,6 @@ export default function OfferScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* BACK */}
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={25} color="#111827" />
-      </TouchableOpacity>
-
       {/* PROGRESS */}
       <View style={styles.progressRow}>
         <View style={[styles.progressPart, styles.progressActive]} />
@@ -195,10 +196,13 @@ export default function OfferScreen() {
               onFocus={() => setActiveField("city")}
               onChangeText={(text) => {
                 setActiveField("city");
+
                 setCityQuery(text);
 
                 setFrom("", "");
+
                 setPickup("", "");
+
                 setPickupQuery("");
               }}
               placeholder="City"
@@ -237,6 +241,7 @@ export default function OfferScreen() {
                 setActiveField("pickup");
 
                 setPickupQuery(text);
+
                 setPickup("", "");
               }}
               placeholder={
@@ -307,6 +312,9 @@ export default function OfferScreen() {
 
         <Ionicons name="arrow-forward" size={21} color="#FFFFFF" />
       </TouchableOpacity>
+
+      {/* MAIN BOTTOM NAVIGATION */}
+      <BottomNav activeTab="offer" />
     </SafeAreaView>
   );
 }
@@ -314,23 +322,10 @@ export default function OfferScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+
     backgroundColor: "#FFFFFF",
+
     paddingHorizontal: 20,
-  },
-
-  backButton: {
-    width: 44,
-    height: 44,
-
-    borderRadius: 22,
-
-    alignItems: "center",
-    justifyContent: "center",
-
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-
-    marginTop: 6,
   },
 
   progressRow: {
@@ -338,7 +333,7 @@ const styles = StyleSheet.create({
 
     gap: 5,
 
-    marginTop: 24,
+    marginTop: 18,
   },
 
   progressPart: {
@@ -494,7 +489,12 @@ const styles = StyleSheet.create({
 
     borderRadius: 18,
 
-    marginBottom: 10,
+    /*
+     * Platz für BottomNav,
+     * damit der Button nicht
+     * darunter verschwindet.
+     */
+    marginBottom: 92,
   },
 
   continueDisabled: {

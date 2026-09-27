@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../prisma.service.js';
+
 import type { CreateRideDto } from './create-ride.dto.js';
 
 @Injectable()
@@ -8,7 +9,9 @@ export class RidesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /*
-   * Neue Fahrt erstellen
+   * ==================================
+   * NEUE FAHRT ERSTELLEN
+   * ==================================
    */
   async create(dto: CreateRideDto) {
     if (
@@ -32,6 +35,10 @@ export class RidesService {
       throw new BadRequestException('Price must be greater than zero.');
     }
 
+    if (!Array.isArray(dto.stops)) {
+      throw new BadRequestException('Stops must be an array.');
+    }
+
     /*
      * Vorerst verwenden wir +03:00,
      * weil unser erster Markt Jordanien ist.
@@ -48,13 +55,15 @@ export class RidesService {
     }
 
     /*
-     * Google Routes hat uns bereits
-     * die Fahrtdauer gegeben.
+     * Google Routes hat uns
+     * die Fahrtdauer bereits geliefert.
      *
      * Beispiel:
-     * Departure 08:00
-     * Duration 4 Stunden
-     * → Arrival 12:00
+     *
+     * Abfahrt: 08:00
+     * Dauer: 4 Stunden
+     *
+     * Ankunft: 12:00
      */
     const arrivalAt = new Date(
       departureAt.getTime() + dto.routeDurationSeconds * 1000,
@@ -65,75 +74,130 @@ export class RidesService {
 
     const ride = await this.prisma.ride.create({
       data: {
-        // START CITY
+        /*
+         * START-STADT
+         */
         fromPlaceId: dto.fromPlaceId,
 
         fromLabel: dto.fromLabel,
 
-        // EXACT PICKUP
+        /*
+         * EXAKTER STARTPUNKT
+         */
         pickupPlaceId: dto.pickupPlaceId,
 
         pickupLabel: dto.pickupLabel,
 
-        // DESTINATION CITY
+        /*
+         * ZIELSTADT
+         */
         toPlaceId: dto.toPlaceId,
 
         toLabel: dto.toLabel,
 
-        // EXACT DROP-OFF
+        /*
+         * EXAKTER AUSSTIEGSPUNKT
+         */
         dropoffPlaceId: dto.dropoffPlaceId,
 
         dropoffLabel: dto.dropoffLabel,
 
-        // DATE + TIME
+        /*
+         * DATUM + ZEIT
+         */
         departureAt,
+
         arrivalAt,
 
-        // ROUTE
+        /*
+         * FINALE ROUTE
+         *
+         * Die Werte beinhalten
+         * inzwischen auch unsere Stops
+         * und Treffpunkte.
+         */
         routeDistanceMeters: dto.routeDistanceMeters,
 
         routeDurationSeconds: dto.routeDurationSeconds,
 
-        // PRICE
+        /*
+         * PREIS
+         */
         price: dto.pricePerSeat,
 
         currency: dto.currency,
 
-        // SEATS
+        /*
+         * PLÄTZE
+         */
         availableSeats: dto.availableSeats,
 
-        // BOOKING
+        /*
+         * BUCHUNG
+         */
         bookingPreference,
 
-        // OPTIONAL COMMENT
+        /*
+         * OPTIONALER KOMMENTAR
+         */
         comment: dto.comment?.trim() || null,
 
         /*
          * TEMPORÄR:
          *
-         * Wir haben noch kein Login/User-System.
-         * Deshalb braucht die Datenbank vorerst
-         * einen Test-Fahrer.
-         *
-         * Später kommt hier:
-         * driverId → User
+         * Wir haben noch kein
+         * User/Login-System.
          */
         driverName: 'Test Driver',
 
         rating: null,
 
-        // OPTIONAL STOPS
+        /*
+         * ==================================
+         * ZWISCHENSTOPPS
+         * ==================================
+         *
+         * Die Reihenfolge des Arrays
+         * ist bereits die optimierte
+         * Fahrreihenfolge.
+         *
+         * Beispiel:
+         *
+         * stops[0] → Position 1
+         * stops[1] → Position 2
+         */
         stops: {
           create: dto.stops.map((stop, index) => ({
+            /*
+             * Stop-Stadt
+             */
             placeId: stop.placeId,
 
             label: stop.label,
 
+            /*
+             * Tatsächlicher
+             * Treffpunkt
+             */
+            meetingPointPlaceId: stop.meetingPointPlaceId?.trim() || null,
+
+            meetingPointLabel: stop.meetingPointLabel?.trim() || null,
+
+            meetingPointAddress: stop.meetingPointAddress?.trim() || null,
+
+            /*
+             * Finale Reihenfolge
+             */
             position: index + 1,
           })),
         },
       },
 
+      /*
+       * Nach dem Erstellen bekommen
+       * wir die Stops direkt wieder
+       * aus PostgreSQL zurück.
+       */
       include: {
         stops: {
           orderBy: {
@@ -147,7 +211,9 @@ export class RidesService {
   }
 
   /*
-   * Alle Fahrten
+   * ==================================
+   * ALLE FAHRTEN
+   * ==================================
    */
   async findAll() {
     const rides = await this.prisma.ride.findMany({
@@ -160,7 +226,9 @@ export class RidesService {
   }
 
   /*
-   * Fahrten suchen
+   * ==================================
+   * FAHRTEN SUCHEN
+   * ==================================
    */
   async search(
     from: string,
@@ -175,18 +243,19 @@ export class RidesService {
     const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
     /*
-     * Zuerst suchen wir professionell
-     * über die eindeutigen
-     * Google Place IDs.
+     * Zuerst über die eindeutigen
+     * Google Place IDs suchen.
      */
     if (fromPlaceId && toPlaceId) {
       const ridesByPlaceId = await this.prisma.ride.findMany({
         where: {
           fromPlaceId,
+
           toPlaceId,
 
           departureAt: {
             gte: startOfDay,
+
             lt: endOfDay,
           },
 
@@ -206,27 +275,28 @@ export class RidesService {
     }
 
     /*
-     * Übergang für unsere alte
-     * Testfahrt.
+     * Übergang für alte Testfahrten.
      *
-     * Später entfernen wir diesen Teil,
-     * wenn alle Fahrten echte
-     * Place IDs haben.
+     * Später entfernen wir diesen
+     * Fallback.
      */
     const ridesByLabel = await this.prisma.ride.findMany({
       where: {
         fromLabel: {
           startsWith: from,
+
           mode: 'insensitive',
         },
 
         toLabel: {
           startsWith: to,
+
           mode: 'insensitive',
         },
 
         departureAt: {
           gte: startOfDay,
+
           lt: endOfDay,
         },
 
@@ -285,7 +355,9 @@ export class RidesService {
   private formatTime(date: Date) {
     return date.toLocaleTimeString('en-GB', {
       hour: '2-digit',
+
       minute: '2-digit',
+
       hour12: false,
 
       timeZone: 'Asia/Amman',
