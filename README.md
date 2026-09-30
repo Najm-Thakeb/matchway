@@ -1,56 +1,98 @@
-# Welcome to your Expo app 👋
+# MatchWay
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+MatchWay is a mobile intercity ride-sharing application that connects drivers and passengers and helps organize shared rides through intelligent route planning and flexible stop management.
 
-## Get started
+The project is currently under active development.
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+### Ride Search
+- Search for rides by origin, destination, date and number of passengers
+- View search results
+- Edit search criteria
 
-2. Start the app
+### Offer a Ride
+- Select origin city and exact pickup point
+- Select destination city and exact drop-off point
+- Choose between calculated route alternatives
+- Add date and time
+- Select available seats
+- Set a price
+- Choose booking preferences
+- Review the complete ride before publishing
+- Publish rides
 
-   ```bash
-   npx expo start
-   ```
+### Smart Route & Stop Management
+- Automatic city suggestions along the selected route
+- Population-aware filtering to prefer relevant cities
+- Route-length-based stop suggestions
+- Manual stop-city selection
+- Automatic optimization of multiple stop order using Google Routes
+- Full route visualization on the map
 
-In the output, you'll find options to open the app in a
+### Smart Meeting Points
+- Automatic meeting-point recommendations for stops
+- Candidate search for locations such as parking areas, train stations and service locations
+- Meeting points can be changed manually
+- Address search directly on the map
+- Route recalculation after changing a meeting point
+- Full trip route and stop markers displayed on the map
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Data Persistence
+- Published rides stored in PostgreSQL
+- Ride stops stored with their final order
+- Exact meeting-point information stored for every stop
+- Prisma used for database access and migrations
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Tech Stack
 
-## Get a fresh project
+### Frontend
+- React Native
+- Expo
+- TypeScript
+- Expo Router
+- Zustand
+- React Native Maps
 
-When you're ready, run:
+### Backend
+- Node.js
+- NestJS
+- TypeScript
+- Prisma
+- PostgreSQL
 
-```bash
-npm run reset-project
-```
+### APIs & Services
+- Google Places API
+- Google Geocoding API
+- Google Routes API
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Architecture
 
-### Other setup steps
+MatchWay consists of a mobile React Native frontend and a NestJS backend.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+The application handles route calculation, stop suggestions, waypoint optimization and meeting-point selection through backend services and external Google APIs.
 
-## Learn more
+Ride and stop data is persisted with Prisma and PostgreSQL.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Current Development Status
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+The current ride-offer flow is:
 
-## Join the community
+`Pickup → Destination → Route → Stops → Meeting Points → Date/Time → Seats → Price → Booking Preference → Review → Publish`
 
-Join our community of developers creating universal apps.
+## Planned Features
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Persistent storage of complete route geometry
+- Intelligent route-based passenger matching
+- Segment-based pricing
+- Real booking and seat reservations
+- Authentication and user accounts
+- User profiles
+- Vehicles
+- Ratings
+- Chat
+- Improved API caching and cost optimization
+
+## Project Status
+
+MatchWay is an actively developed personal software project.
